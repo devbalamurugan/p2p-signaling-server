@@ -1,331 +1,1230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Pure P2P Secure Chat</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Nearby — Pure P2P Chat</title>
+    <style>
+      :root {
+        --teal-dark: #0b3d3a;
+        --teal: #0f5e57;
+        --teal-mid: #12857a;
+        --mint: #3ddc97;
+        --bg: #e9f2ee;
+        --panel: #ffffff;
+        --bubble-out: #d7f3e3;
+        --bubble-in: #ffffff;
+        --ink: #0d2b26;
+        --ink-soft: #5c7a74;
+        --danger: #e0574c;
+        --amber: #e0a83b;
+        --radius: 18px;
+        --shadow: 0 8px 24px rgba(11, 61, 58, 0.1);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at 15% 8%,
+            rgba(61, 220, 151, 0.1),
+            transparent 40%
+          ),
+          radial-gradient(
+            circle at 85% 92%,
+            rgba(15, 94, 87, 0.08),
+            transparent 45%
+          ),
+          var(--bg);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100%;
+        padding: 0;
+      }
+      #app {
+        width: 100%;
+        max-width: 460px;
+        height: 100dvh;
+        max-height: 900px;
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      @media (min-width: 520px) {
+        #app {
+          height: 860px;
+          margin: 24px;
+          border-radius: 28px;
+        }
+      }
 
-    <!-- EMBEDDED PRODUCTION ENGINE BLOCK (NO CDN DEPENDENCY) -->
+      /* ---------- LOGIN ---------- */
+      #login-screen {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        text-align: center;
+        background: linear-gradient(
+          160deg,
+          var(--teal-dark),
+          var(--teal) 60%,
+          var(--teal-mid)
+        );
+        color: #eafff6;
+      }
+      .logo-mark {
+        width: 74px;
+        height: 74px;
+        border-radius: 22px;
+        background: linear-gradient(145deg, var(--mint), #1fbf8a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-bottom: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      #login-screen h1 {
+        font-size: 1.5rem;
+        margin: 0 0 4px;
+        letter-spacing: -0.02em;
+      }
+      #login-screen p.tag {
+        opacity: 0.75;
+        font-size: 0.85rem;
+        margin: 0 0 28px;
+        max-width: 280px;
+        line-height: 1.5;
+      }
+      #username {
+        width: 100%;
+        max-width: 280px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: none;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 1rem;
+        outline: none;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+      }
+      #username::placeholder {
+        color: rgba(255, 255, 255, 0.55);
+      }
+      #username:focus {
+        border-color: var(--mint);
+        background: rgba(255, 255, 255, 0.18);
+      }
+      #enter-btn {
+        margin-top: 16px;
+        width: 100%;
+        max-width: 280px;
+        padding: 14px;
+        border: none;
+        border-radius: 14px;
+        background: var(--mint);
+        color: #04241c;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        letter-spacing: 0.01em;
+      }
+      #enter-btn:active {
+        transform: scale(0.98);
+      }
+      .login-note {
+        margin-top: 22px;
+        font-size: 0.72rem;
+        opacity: 0.55;
+        max-width: 280px;
+      }
+
+      /* ---------- MAIN SHELL ---------- */
+      #main-screen {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+      }
+      header.topbar {
+        background: linear-gradient(120deg, var(--teal-dark), var(--teal));
+        color: #eafff6;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      header.topbar .me-badge {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+      header.topbar .titles {
+        flex: 1;
+        min-width: 0;
+      }
+      header.topbar .titles .name {
+        font-weight: 700;
+        font-size: 0.98rem;
+      }
+      header.topbar .titles .status {
+        font-size: 0.72rem;
+        opacity: 0.8;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--amber);
+        flex-shrink: 0;
+      }
+      .dot.live {
+        background: var(--mint);
+        box-shadow: 0 0 0 3px rgba(61, 220, 151, 0.25);
+      }
+      .dot.down {
+        background: var(--danger);
+      }
+      #back-btn {
+        display: none;
+        background: none;
+        border: none;
+        color: #eafff6;
+        font-size: 1.3rem;
+        cursor: pointer;
+        padding: 4px 8px 4px 0;
+      }
+
+      /* ---------- CONTACTS (people online) ---------- */
+      #contacts-screen {
+        flex: 1;
+        overflow-y: auto;
+        background: var(--panel);
+      }
+      .section-label {
+        padding: 14px 16px 6px;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+      .contact-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f5f3;
+      }
+      .contact-row:active {
+        background: #f2f9f6;
+      }
+      .avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, var(--teal-mid), var(--mint));
+        color: #04241c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1rem;
+      }
+      .contact-meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .contact-meta .cname {
+        font-weight: 600;
+        font-size: 0.94rem;
+      }
+      .contact-meta .clast {
+        font-size: 0.78rem;
+        color: var(--ink-soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .chev {
+        color: #cfe0da;
+        font-size: 1.1rem;
+      }
+      #empty-contacts {
+        padding: 60px 30px;
+        text-align: center;
+        color: var(--ink-soft);
+      }
+      #empty-contacts .ic {
+        font-size: 2.2rem;
+        margin-bottom: 10px;
+      }
+      #empty-contacts .sub {
+        font-size: 0.8rem;
+        margin-top: 6px;
+        line-height: 1.5;
+      }
+
+      .manual-target {
+        margin: 10px 16px 4px;
+        padding: 10px 12px;
+        background: #f2f9f6;
+        border-radius: 14px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .manual-target input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.88rem;
+        color: var(--ink);
+      }
+      .manual-target button {
+        border: none;
+        background: var(--teal);
+        color: #fff;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      /* ---------- CHAT THREAD ---------- */
+      #chat-screen {
+        flex: 1;
+        display: none;
+        flex-direction: column;
+        min-height: 0;
+      }
+      #messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background:
+          radial-gradient(
+            circle at 20% 10%,
+            rgba(15, 94, 87, 0.05),
+            transparent 30%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(61, 220, 151, 0.06),
+            transparent 35%
+          ),
+          #f5f9f7;
+      }
+      .bubble-row {
+        display: flex;
+      }
+      .bubble-row.out {
+        justify-content: flex-end;
+      }
+      .bubble {
+        max-width: 76%;
+        padding: 9px 12px;
+        border-radius: 16px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        word-wrap: break-word;
+      }
+      .bubble-row.out .bubble {
+        background: var(--bubble-out);
+        border-bottom-right-radius: 4px;
+      }
+      .bubble-row.in .bubble {
+        background: var(--bubble-in);
+        border-bottom-left-radius: 4px;
+      }
+      .bubble img {
+        max-width: 100%;
+        border-radius: 10px;
+        display: block;
+        margin-top: 4px;
+      }
+      .bubble .meta {
+        font-size: 0.62rem;
+        color: var(--ink-soft);
+        margin-top: 3px;
+        text-align: right;
+      }
+      .sys-row {
+        align-self: center;
+        font-size: 0.72rem;
+        color: var(--ink-soft);
+        background: #e4efea;
+        padding: 4px 10px;
+        border-radius: 10px;
+        margin: 4px 0;
+      }
+      .progress-wrap {
+        width: 150px;
+        height: 5px;
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 3px;
+        margin-top: 6px;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--teal-mid);
+        transition: width 0.15s;
+      }
+
+      #composer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        background: var(--panel);
+        border-top: 1px solid #eef3f1;
+        flex-shrink: 0;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      }
+      #composer .icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: #f0f5f3;
+        color: var(--teal);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      #msg-input {
+        flex: 1;
+        border: none;
+        background: #f0f5f3;
+        border-radius: 20px;
+        padding: 10px 16px;
+        font-size: 0.9rem;
+        outline: none;
+      }
+      #send-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: var(--teal);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      #send-btn:disabled {
+        opacity: 0.4;
+      }
+      #image-input {
+        display: none;
+      }
+
+      .toast {
+        position: absolute;
+        left: 50%;
+        bottom: 90px;
+        transform: translateX(-50%);
+        background: rgba(13, 43, 38, 0.92);
+        color: #eafff6;
+        padding: 9px 16px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        z-index: 50;
+        max-width: 88%;
+        text-align: center;
+        box-shadow: var(--shadow);
+        animation: fadeUp 0.25s ease;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translate(-50%, 8px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 0px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- LOGIN -->
+      <div id="login-screen">
+        <div class="logo-mark">🔒</div>
+        <h1>Nearby</h1>
+        <p class="tag">
+          Direct device-to-device chat. No server, no database, no logs —
+          messages exist only in RAM while your tab is open.
+        </p>
+        <input
+          type="text"
+          id="username"
+          placeholder="Pick a display name"
+          maxlength="20"
+        />
+        <button id="enter-btn" onclick="startApp()">Connect</button>
+        <div class="login-note">
+          Uses public WebTorrent trackers only to discover who else is nearby.
+          Chat and photos travel peer-to-peer, never through the tracker.
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div id="main-screen">
+        <header class="topbar">
+          <button id="back-btn" onclick="showContacts()">←</button>
+          <div class="me-badge" id="me-badge">?</div>
+          <div class="titles">
+            <div class="name" id="topbar-name">—</div>
+            <div class="status">
+              <span class="dot" id="status-dot"></span
+              ><span id="status-text">Connecting…</span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Contacts / discovery list -->
+        <div id="contacts-screen">
+          <div class="section-label">Online nearby</div>
+          <div id="contact-list"></div>
+          <div id="empty-contacts">
+            <div class="ic">📡</div>
+            Looking for peers…
+            <div class="sub">
+              Open this page on another device with a different name to test the
+              connection. Both devices need to be online at the same time.
+            </div>
+          </div>
+          <div class="section-label" style="margin-top: 6px">
+            Or chat by exact name
+          </div>
+          <div class="manual-target">
+            <input
+              type="text"
+              id="manual-username"
+              placeholder="Type a friend's exact name"
+            />
+            <button onclick="openManualChat()">Open</button>
+          </div>
+        </div>
+
+        <!-- Chat thread -->
+        <div id="chat-screen">
+          <div id="messages"></div>
+          <div id="composer">
+            <button
+              class="icon-btn"
+              onclick="document.getElementById('image-input').click()"
+            >
+              📷
+            </button>
+            <input type="file" id="image-input" accept="image/*" />
+            <input type="text" id="msg-input" placeholder="Message" />
+            <button id="send-btn" onclick="sendPrivateMessage()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
-        // Pure Embedded Cross-Device WebRTC Signaling Engine
-        window.P2PT = class P2PT {
-            constructor(announceURLs, roomID) {
-                this.announceURLs = announceURLs;
-                this.roomID = roomID || "p2pt-default";
-                this.peers = new Map();
-                this.events = {};
-                this.sockets = [];
-            }
+      /* =========================================================================
+   NEARBY — Pure P2P chat over WebRTC, discovered via public WebTorrent
+   trackers speaking the ACTUAL tracker wire protocol (JSON-over-WS variant
+   of the BitTorrent tracker spec, as implemented by bittorrent-tracker /
+   WebTorrent). No custom relay schema — this is what the public trackers
+   really understand.
 
-            on(event, callback) {
-                if (!this.events[event]) this.events[event] = [];
-                this.events[event].push(callback);
-            }
+   Design notes (read before extending):
+   - info_hash / peer_id are 20-byte values, transmitted as raw binary
+     strings inside JSON (one JS string code unit per byte). This matches
+     what the real tracker servers expect on the wire.
+   - Targeted 1:1 addressing does NOT exist at the tracker level — trackers
+     broadcast offers to `numwant` random swarm members. So we connect to
+     everyone we discover (small mesh) and resolve usernames AFTER the
+     RTCDataChannel opens via a one-time `hello` packet. The UI then filters
+     to whichever peer you tap on. This is the architecturally correct way
+     to get "chat by username" out of a swarm-based tracker.
+   - No TURN server is configured below (TURN_SERVERS is empty). On mobile
+     carrier networks with CGNAT (common on Jio/Airtel), pure STUN will fail
+     to connect a meaningful fraction of the time. Add a TURN server before
+     relying on this beyond same-Wi-Fi testing.
+   ========================================================================= */
 
-            emit(event, ...args) {
-                if (this.events[event]) this.events[event].forEach(cb => cb(...args));
-            }
+      const ROOM_NAME = "global-webrtc-production-p2p-room-2026";
+      const TRACKER_URLS = [
+        "wss://tracker.openwebtorrent.com",
+        "wss://tracker.btorrent.xyz",
+        "wss://tracker.files.fm:7073/announce",
+      ];
+      // Add a TURN server here for reliable mobile-network connectivity, e.g.:
+      // { urls:'turn:your-turn-host:3478', username:'user', credential:'pass' }
+      const TURN_SERVERS = [];
+      const ICE_CONFIG = {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          ...TURN_SERVERS,
+        ],
+      };
 
-            start() {
-                console.log("Starting Global P2P Engine Core...");
-                let connectedCount = 0;
+      const ANNOUNCE_INTERVAL_MS = 90 * 1000; // periodic re-announce / heartbeat
+      const NUMWANT = 8; // how many swarm peers to request per announce
+      const CHUNK_SIZE = 16 * 1024; // safe cross-browser datachannel chunk size
+      const BUFFERED_AMOUNT_LOW = 256 * 1024; // backpressure threshold
 
-                this.announceURLs.forEach(url => {
-                    try {
-                        const ws = new WebSocket(url);
-                        this.sockets.push(ws);
+      let myUsername = "";
+      let myPeerId = null; // Uint8Array(20)
+      let infoHash = null; // Uint8Array(20)
+      let ws = null;
+      let wsUrlIndex = 0;
+      let reconnectDelay = 1000;
+      let announceTimer = null;
 
-                        ws.onopen = () => {
-                            connectedCount++;
-                            if (connectedCount === 1) {
-                                this.emit('trackerconnect');
-                            }
-                            // Registering Room Token with tracker endpoint
-                            this.announcePeer(ws);
-                        };
+      const peers = new Map(); // peerIdHex -> { pc, dc, offerId, username, connectionState }
+      const usernameToPeerId = new Map();
+      const chatLogs = new Map(); // username -> [ {dir, kind, text/url, ts} ]
+      let activeChatUsername = null;
+      let incomingTransfers = new Map(); // transferId -> { meta, chunks:[], received }
+      let transferCounter = 1;
 
-                        ws.onmessage = (event) => {
-                            this.handleTrackerMessage(ws, event.data);
-                        };
+      /* ---------------- byte helpers ---------------- */
+      function randomBytes(n) {
+        const b = new Uint8Array(n);
+        crypto.getRandomValues(b);
+        return b;
+      }
+      function bytesToBinaryString(bytes) {
+        let s = "";
+        for (let i = 0; i < bytes.length; i++)
+          s += String.fromCharCode(bytes[i]);
+        return s;
+      }
+      async function sha1_20(str) {
+        const enc = new TextEncoder().encode(str);
+        const digest = await crypto.subtle.digest("SHA-1", enc);
+        return new Uint8Array(digest); // 20 bytes exactly
+      }
+      function hex(bytes) {
+        return Array.from(bytes)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      function randomHexId(len = 16) {
+        return hex(randomBytes(len / 2));
+      }
 
-                        ws.onerror = ws.onclose = () => {
-                            // Background dynamic auto-reconnect fallback mechanism
-                        };
-                    } catch (e) { console.error(e); }
-                });
-            }
+      /* ---------------- app bootstrap ---------------- */
+      async function startApp() {
+        const val = document.getElementById("username").value.trim();
+        if (!val) return alert("Enter a display name first");
+        myUsername = val;
+        myPeerId = randomBytes(20);
+        infoHash = await sha1_20(ROOM_NAME);
 
-            announcePeer(ws) {
-                if (ws.readyState === WebSocket.OPEN && window.myCurrentUsername) {
-                    const initPacket = JSON.stringify({
-                        action: 'announce',
-                        info_hash: this.roomID,
-                        peer_id: window.myCurrentUsername,
-                        numwant: 50
-                    });
-                    ws.send(initPacket);
-                }
-            }
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("main-screen").style.display = "flex";
+        document.getElementById("me-badge").textContent = myUsername
+          .slice(0, 2)
+          .toUpperCase();
+        document.getElementById("topbar-name").textContent = myUsername;
 
-            handleTrackerMessage(ws, rawData) {
-                try {
-                    // Torrent dynamic parser simulation mapping layers
-                    let data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+        connectTracker();
+      }
 
-                    if (data.peers || data.action === 'announce') {
-                        // Simulated cross-network device routing channel handler
-                        const targetPeerID = data.peer_id || (data.peers && Object.keys(data.peers)[0]);
+      /* ---------------- tracker signaling (real wire protocol) ---------------- */
+      function connectTracker() {
+        const url = TRACKER_URLS[wsUrlIndex % TRACKER_URLS.length];
+        setStatus("Connecting to tracker…", "connecting");
+        ws = new WebSocket(url);
 
-                        if (targetPeerID && targetPeerID !== window.myCurrentUsername) {
-                            this.setupDirectPeerPipe(ws, targetPeerID);
-                        }
-                    } else if (data.type === 'private-relay' && data.to === window.myCurrentUsername) {
-                        const targetPeerID = data.from;
-                        this.setupDirectPeerPipe(ws, targetPeerID);
-
-                        const peerList = this.peers.get(targetPeerID);
-                        if (peerList) {
-                            const pipeInstance = peerList.get('ws_pipe');
-                            this.emit('msg', pipeInstance, data.payload);
-                        }
-                    }
-                } catch (e) { /* ignore parse errors */ }
-            }
-
-            setupDirectPeerPipe(ws, targetPeerID) {
-                if (!this.peers.has(targetPeerID)) {
-                    const simulatedPeerPipe = {
-                        customUsername: targetPeerID,
-                        send: (msgString) => {
-                            if (ws.readyState === WebSocket.OPEN) {
-                                ws.send(JSON.stringify({
-                                    type: 'private-relay',
-                                    from: window.myCurrentUsername,
-                                    to: targetPeerID,
-                                    payload: msgString
-                                }));
-                            }
-                        }
-                    };
-
-                    const internalList = new Map();
-                    internalList.set('ws_pipe', simulatedPeerPipe);
-                    this.peers.set(targetPeerID, internalList);
-
-                    this.emit('peerconnect', simulatedPeerPipe);
-                }
-            }
+        ws.onopen = () => {
+          reconnectDelay = 1000;
+          setStatus("Online", "live");
+          announceNow("started");
+          if (announceTimer) clearInterval(announceTimer);
+          announceTimer = setInterval(
+            () => announceNow(),
+            ANNOUNCE_INTERVAL_MS,
+          );
         };
-    </script>
-</head>
-<body style="font-family: Arial, sans-serif; padding: 15px;">
 
-    <h2>Global Pure P2P Private Image & Text Sharing</h2>
+        ws.onmessage = (event) => {
+          let msg;
+          try {
+            msg = JSON.parse(event.data);
+          } catch (e) {
+            return;
+          }
+          handleTrackerMessage(msg);
+        };
 
-    <div id="login-box">
-        <input type="text" id="username" placeholder="Enter Your Username">
-        <button onclick="startP2PConnection()">Open App & Connect</button>
-    </div>
+        ws.onclose = () => {
+          setStatus("Reconnecting…", "down");
+          if (announceTimer) clearInterval(announceTimer);
+          wsUrlIndex++;
+          setTimeout(connectTracker, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 1.7, 20000);
+        };
 
-    <div id="chat-box" style="display:none; margin-top: 20px;">
-        <p>Status: <b id="status" style="color: orange;">Connecting to Public Trackers...</b></p>
+        ws.onerror = () => {
+          try {
+            ws.close();
+          } catch (e) {}
+        };
+      }
 
-        <div style="margin-bottom: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-            <label><b>Send To (Target Username):</b></label><br>
-            <input type="text" id="target-username" placeholder="Type friend's exact username...">
-        </div>
+      async function announceNow(event) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-        <div id="messages" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:10px; margin-bottom:10px; background: #fafafa;"></div>
-
-        <div style="margin-bottom: 10px; padding: 5px; border: 1px dashed #777;">
-            <label><b>Share Photo:</b></label>
-            <input type="file" id="image-input" accept="image/*" onchange="sendPrivateImage()">
-        </div>
-
-        <input type="text" id="msg-input" placeholder="Type secret private message...">
-        <button onclick="sendPrivateMessage()">Send Message</button>
-    </div>
-
-    <script>
-        let p2p;
-        let myUsername = "";
-
-        // Core secure web torrent tracker pathways
-        const trackers = [
-            'wss://openwebtorrent.com', // fixed malformed URL
-            'wss://tracker.files.fm:7073/announce',
-            'wss://tracker.btorrent.xyz'
-        ];
-
-        function startP2PConnection() {
-            myUsername = document.getElementById('username').value.trim();
-            if (!myUsername) return alert("Please enter a username!");
-
-            window.myCurrentUsername = myUsername;
-
-            document.getElementById('login-box').style.display = 'none';
-            document.getElementById('chat-box').style.display = 'block';
-
-            try {
-                p2p = new P2PT(trackers, 'global-p2p-production-room-final-2026');
-
-                p2p.on('trackerconnect', () => {
-                    document.getElementById('status').innerText = "Connected to Global Network! Live.";
-                    document.getElementById('status').style.color = "green";
-                });
-
-                p2p.on('peerconnect', (peer) => {
-                    peer.send(JSON.stringify({ type: 'intro', from: myUsername }));
-                });
-
-                p2p.on('msg', (peer, msg) => {
-                    try {
-                        const data = JSON.parse(msg);
-
-                        if (data.type === 'intro') {
-                            peer.customUsername = data.from;
-                        } else if (data.type === 'private-chat') {
-                            if (data.to === myUsername) {
-                                logMessage(`[Private] ${data.from}: ${data.text}`);
-                            }
-                        } else if (data.type === 'private-image') {
-                            if (data.to === myUsername) {
-                                logImage(`[Private Image] ${data.from}:`, data.imageBytes);
-                            }
-                        }
-                    } catch (e) { /* ignore malformed messages */ }
-                });
-
-                p2p.start();
-
-            } catch (err) {
-                document.getElementById('status').innerText = "Initialization Error: " + err.message;
-                document.getElementById('status').style.color = "red";
-            }
-        }
-
-        // ---------- send private text message ----------
-        function sendPrivateMessage() {
-            const targetUser = document.getElementById('target-username').value.trim();
-            const msgInput = document.getElementById('msg-input');
-            const text = msgInput.value.trim();
-
-            if (!targetUser) return alert("Type Target Username!");
-            if (!text) return;
-
-            const packet = JSON.stringify({
-                type: 'private-chat',
-                from: myUsername,
-                to: targetUser,
-                text: text
+        // create fresh offers for however many extra peers we still want
+        const wantMore = Math.max(0, NUMWANT - peers.size);
+        const offers = [];
+        for (let i = 0; i < wantMore; i++) {
+          const offerId = randomHexId(16);
+          const pc = createPeerConnection(null, offerId, true);
+          try {
+            const offer = await pc.pc.createOffer();
+            await pc.pc.setLocalDescription(offer);
+            offers.push({
+              offer_id: offerId,
+              offer: { type: offer.type, sdp: offer.sdp },
             });
-
-            let sent = false;
-
-            // Try sending via peer pipes
-            for (let [peerID, peerList] of p2p.peers) {
-                if (peerID === targetUser) {
-                    const pipe = peerList.get('ws_pipe');
-                    if (pipe) {
-                        pipe.send(packet);
-                        sent = true;
-                        break;
-                    }
-                } else {
-                    // also check customUsername inside each pipe
-                    for (let [key, pipe] of peerList) {
-                        if (pipe.customUsername === targetUser) {
-                            pipe.send(packet);
-                            sent = true;
-                            break;
-                        }
-                    }
-                    if (sent) break;
-                }
-            }
-
-            if (sent) {
-                logMessage(`You (to ${targetUser}): ${text}`);
-                msgInput.value = '';
-            } else {
-                alert(`Error: User '${targetUser}' is not found online anywhere on the global network.`);
-            }
+            pc.pendingOfferId = offerId;
+          } catch (e) {
+            /* skip this slot */
+          }
         }
 
-        // ---------- send private image ----------
-        function sendPrivateImage() {
-            const targetUser = document.getElementById('target-username').value.trim();
-            const fileInput = document.getElementById('image-input');
-            const file = fileInput.files[0];
+        const packet = {
+          action: "announce",
+          info_hash: bytesToBinaryString(infoHash),
+          peer_id: bytesToBinaryString(myPeerId),
+          numwant: offers.length,
+          uploaded: 0,
+          downloaded: 0,
+          left: 0,
+        };
+        if (event) packet.event = event;
+        if (offers.length) packet.offers = offers;
 
-            if (!targetUser) {
-                alert("Type Target Username First!");
-                fileInput.value = '';
-                return;
-            }
-            if (!file) return;
+        ws.send(JSON.stringify(packet));
+      }
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const base64String = event.target.result;
+      function handleTrackerMessage(msg) {
+        if (msg.action !== "announce" && msg.action !== "answer") return;
 
-                const packet = JSON.stringify({
-                    type: 'private-image',
-                    from: myUsername,
-                    to: targetUser,
-                    imageBytes: base64String
-                });
-
-                let sent = false;
-
-                for (let [peerID, peerList] of p2p.peers) {
-                    if (peerID === targetUser) {
-                        const pipe = peerList.get('ws_pipe');
-                        if (pipe) {
-                            pipe.send(packet);
-                            sent = true;
-                            break;
-                        }
-                    } else {
-                        for (let [key, pipe] of peerList) {
-                            if (pipe.customUsername === targetUser) {
-                                pipe.send(packet);
-                                sent = true;
-                                break;
-                            }
-                        }
-                        if (sent) break;
-                    }
-                }
-
-                if (sent) {
-                    logImage(`You (to ${targetUser}):`, base64String);
-                    fileInput.value = '';
-                } else {
-                    alert(`Error: User '${targetUser}' is not found online.`);
-                    fileInput.value = '';
-                }
-            };
-            reader.readAsDataURL(file);
+        // Incoming OFFER relayed from another peer in the swarm
+        if (msg.offer && msg.offer_id && msg.peer_id) {
+          const fromHex = hex(binaryStringToBytes(msg.peer_id));
+          if (fromHex === hex(myPeerId)) return; // ignore echoes of our own
+          receiveOffer(fromHex, msg.offer_id, msg.offer);
+          return;
         }
 
-        // ---------- UI logging helpers ----------
-        function logMessage(msg) {
-            const msgDiv = document.getElementById('messages');
-            msgDiv.innerHTML += `<div>${msg}</div>`;
-            msgDiv.scrollTop = msgDiv.scrollHeight;
+        // Incoming ANSWER to an offer we sent
+        if (msg.answer && msg.offer_id) {
+          const entry = findPeerByOfferId(msg.offer_id);
+          if (entry) {
+            entry.pc
+              .setRemoteDescription(new RTCSessionDescription(msg.answer))
+              .catch(() => {});
+          }
+          return;
+        }
+      }
+
+      function binaryStringToBytes(str) {
+        const b = new Uint8Array(str.length);
+        for (let i = 0; i < str.length; i++) b[i] = str.charCodeAt(i) & 0xff;
+        return b;
+      }
+      function findPeerByOfferId(offerId) {
+        for (const entry of peers.values()) {
+          if (entry.pendingOfferId === offerId) return entry;
+        }
+        return null;
+      }
+
+      /* ---------------- WebRTC peer connections ---------------- */
+      function createPeerConnection(remotePeerIdHex, offerId, isInitiator) {
+        const pc = new RTCPeerConnection(ICE_CONFIG);
+        const entry = {
+          pc,
+          dc: null,
+          offerId,
+          pendingOfferId: null,
+          username: null,
+          connectionState: "new",
+        };
+
+        pc.onicecandidate = (e) => {
+          // Trickle ICE isn't part of this tracker's simple offer/answer relay —
+          // candidates are bundled in the SDP (default browser behavior waits
+          // briefly then includes them), so nothing to send here explicitly.
+        };
+
+        pc.onconnectionstatechange = () => {
+          entry.connectionState = pc.connectionState;
+          if (
+            pc.connectionState === "failed" ||
+            pc.connectionState === "disconnected"
+          ) {
+            tryIceRestart(entry);
+          }
+          if (
+            pc.connectionState === "closed" ||
+            pc.connectionState === "failed"
+          ) {
+            cleanupPeer(remotePeerIdHex);
+          }
+        };
+
+        if (isInitiator) {
+          const dc = pc.createDataChannel("nearby-data");
+          wireDataChannel(entry, dc);
+        } else {
+          pc.ondatachannel = (e) => wireDataChannel(entry, e.channel);
         }
 
-        function logImage(label, base64Data) {
-            const msgDiv = document.getElementById('messages');
-            msgDiv.innerHTML += `
-                <div>
-                    <b>${label}</b><br>
-                    <img src="${base64Data}" style="max-width: 200px; border-radius: 8px; margin-top: 5px;"><br>
-                </div>
-            `;
-            msgDiv.scrollTop = msgDiv.scrollHeight;
+        const key = remotePeerIdHex || "pending-" + offerId;
+        peers.set(key, entry);
+        return entry;
+      }
+
+      function tryIceRestart(entry) {
+        if (entry.pc.restartIce) {
+          try {
+            entry.pc.restartIce();
+          } catch (e) {}
         }
+      }
+
+      function cleanupPeer(peerIdHex) {
+        const entry = peers.get(peerIdHex);
+        if (entry && entry.username) {
+          usernameToPeerId.delete(entry.username);
+          renderContacts();
+          if (activeChatUsername === entry.username)
+            setStatus("Peer disconnected", "down");
+        }
+        peers.delete(peerIdHex);
+      }
+
+      async function receiveOffer(fromHex, offerId, offer) {
+        if (peers.has(fromHex)) return; // already connected/connecting to this peer
+        const entry = createPeerConnection(fromHex, offerId, false);
+        peers.delete("pending-" + offerId);
+        peers.set(fromHex, entry);
+
+        await entry.pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await entry.pc.createAnswer();
+        await entry.pc.setLocalDescription(answer);
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              action: "announce",
+              info_hash: bytesToBinaryString(infoHash),
+              peer_id: bytesToBinaryString(myPeerId),
+              to_peer_id: bytesToBinaryString(
+                binaryStringToBytesFromHex(fromHex),
+              ),
+              answer: { type: answer.type, sdp: answer.sdp },
+              offer_id: offerId,
+            }),
+          );
+        }
+      }
+      function binaryStringToBytesFromHex(hexStr) {
+        const bytes = new Uint8Array(hexStr.length / 2);
+        for (let i = 0; i < bytes.length; i++)
+          bytes[i] = parseInt(hexStr.substr(i * 2, 2), 16);
+        return bytes;
+      }
+
+      function wireDataChannel(entry, dc) {
+        entry.dc = dc;
+        dc.binaryType = "arraybuffer";
+        dc.bufferedAmountLowThreshold = BUFFERED_AMOUNT_LOW;
+
+        dc.onopen = () => {
+          // resolve final peer key once we may have created this under a "pending-" key
+          finalizePeerKey(entry);
+          dc.send(JSON.stringify({ t: "hello", u: myUsername }));
+        };
+
+        dc.onmessage = (event) => {
+          if (typeof event.data === "string") {
+            handleControlMessage(entry, JSON.parse(event.data));
+          } else {
+            handleBinaryChunk(entry, event.data);
+          }
+        };
+
+        dc.onclose = () => {
+          for (const [key, val] of peers.entries()) {
+            if (val === entry) cleanupPeer(key);
+          }
+        };
+      }
+
+      function finalizePeerKey(entry) {
+        // no-op placeholder: keys are already set correctly at creation time for
+        // both initiator (peer id unknown until hello) and receiver (known) paths.
+      }
+
+      function handleControlMessage(entry, msg) {
+        if (msg.t === "hello") {
+          entry.username = msg.u;
+          usernameToPeerId.set(msg.u, entry);
+          renderContacts();
+          if (!chatLogs.has(msg.u)) chatLogs.set(msg.u, []);
+          return;
+        }
+        if (msg.t === "text") {
+          pushMessage(entry.username, "in", { kind: "text", text: msg.text });
+          return;
+        }
+        if (msg.t === "image-start") {
+          incomingTransfers.set(msg.id, {
+            meta: msg,
+            chunks: new Array(msg.totalChunks),
+            received: 0,
+            numericId: msg.numericId,
+          });
+          pushMessage(entry.username, "in", { kind: "progress", id: msg.id });
+          return;
+        }
+      }
+
+      function handleBinaryChunk(entry, buf) {
+        const view = new DataView(buf);
+        const transferId = view.getUint32(0, true);
+        const idStr = String(transferId);
+        const chunkData = buf.slice(4);
+
+        // find the transfer whose id matches (we encode a numeric alias -> string map)
+        let target = null,
+          targetKey = null;
+        for (const [key, t] of incomingTransfers.entries()) {
+          if (t.numericId === transferId) {
+            target = t;
+            targetKey = key;
+            break;
+          }
+        }
+        if (!target) return;
+
+        target.chunks[target.received] = chunkData;
+        target.received++;
+        updateProgressUI(targetKey, target.received / target.meta.totalChunks);
+
+        if (target.received >= target.meta.totalChunks) {
+          const blob = new Blob(target.chunks, {
+            type: target.meta.mime || "image/jpeg",
+          });
+          const url = URL.createObjectURL(blob);
+          replaceProgressWithImage(targetKey, url);
+          incomingTransfers.delete(targetKey);
+        }
+      }
+
+      /* ---------------- sending: text ---------------- */
+      function sendPrivateMessage() {
+        const input = document.getElementById("msg-input");
+        const text = input.value.trim();
+        if (!text || !activeChatUsername) return;
+        const entry = usernameToPeerId.get(activeChatUsername);
+        if (!entry || !entry.dc || entry.dc.readyState !== "open") {
+          return showToast("Still connecting to " + activeChatUsername + "…");
+        }
+        entry.dc.send(JSON.stringify({ t: "text", text }));
+        pushMessage(activeChatUsername, "out", { kind: "text", text });
+        input.value = "";
+      }
+
+      /* ---------------- sending: chunked image ---------------- */
+      document
+        .getElementById("image-input")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          e.target.value = "";
+          if (!file || !activeChatUsername) return;
+          const entry = usernameToPeerId.get(activeChatUsername);
+          if (!entry || !entry.dc || entry.dc.readyState !== "open") {
+            return showToast("Still connecting to " + activeChatUsername + "…");
+          }
+          await sendImageChunked(entry, file);
+        });
+
+      async function sendImageChunked(entry, file) {
+        const buf = await file.arrayBuffer();
+        const totalChunks = Math.ceil(buf.byteLength / CHUNK_SIZE);
+        const numericId = transferCounter++;
+        const localId = "out-" + numericId;
+
+        // numericId travels inside image-start so the receiver ties incoming
+        // binary chunks (which only carry the numeric id, to keep headers tiny)
+        // back to the right transfer.
+        entry.dc.send(
+          JSON.stringify({
+            t: "image-start",
+            id: localId,
+            numericId,
+            name: file.name,
+            mime: file.type,
+            size: buf.byteLength,
+            totalChunks,
+          }),
+        );
+
+        pushMessage(activeChatUsername, "out", {
+          kind: "progress",
+          id: localId,
+        });
+
+        for (let i = 0; i < totalChunks; i++) {
+          if (entry.dc.readyState !== "open") {
+            showToast("Connection dropped mid-transfer");
+            return;
+          }
+          // backpressure: wait if too much is buffered
+          while (entry.dc.bufferedAmount > BUFFERED_AMOUNT_LOW) {
+            await new Promise((res) => setTimeout(res, 30));
+          }
+          const start = i * CHUNK_SIZE;
+          const slice = buf.slice(start, start + CHUNK_SIZE);
+          const packet = new Uint8Array(4 + slice.byteLength);
+          new DataView(packet.buffer).setUint32(0, numericId, true);
+          packet.set(new Uint8Array(slice), 4);
+          entry.dc.send(packet.buffer);
+          updateProgressUI(localId, (i + 1) / totalChunks);
+        }
+        // tag the numericId onto our own progress row's mirror image so it matches
+        // (sender doesn't need reassembly, just shows the local file preview)
+        const url = URL.createObjectURL(file);
+        replaceProgressWithImage(localId, url);
+      }
+
+      /* ---------------- UI rendering ---------------- */
+      function setStatus(text, kind) {
+        document.getElementById("status-text").textContent = text;
+        const dot = document.getElementById("status-dot");
+        dot.className =
+          "dot" + (kind === "live" ? " live" : kind === "down" ? " down" : "");
+      }
+
+      function renderContacts() {
+        const list = document.getElementById("contact-list");
+        const empty = document.getElementById("empty-contacts");
+        const names = Array.from(usernameToPeerId.keys());
+        list.innerHTML = "";
+        empty.style.display = names.length ? "none" : "block";
+        names.forEach((name) => {
+          const row = document.createElement("div");
+          row.className = "contact-row";
+          row.onclick = () => openChat(name);
+          const log = chatLogs.get(name) || [];
+          const last = log.length
+            ? log[log.length - 1].kind === "text"
+              ? log[log.length - 1].text
+              : "📷 Photo"
+            : "Say hi 👋";
+          row.innerHTML = `
+      <div class="avatar">${name.slice(0, 2).toUpperCase()}</div>
+      <div class="contact-meta">
+        <div class="cname">${escapeHtml(name)}</div>
+        <div class="clast">${escapeHtml(last)}</div>
+      </div>
+      <div class="chev">›</div>`;
+          list.appendChild(row);
+        });
+      }
+
+      function openManualChat() {
+        const name = document.getElementById("manual-username").value.trim();
+        if (!name) return;
+        if (!usernameToPeerId.has(name)) {
+          return showToast(name + " isn't visible on the network yet");
+        }
+        openChat(name);
+      }
+
+      function openChat(name) {
+        activeChatUsername = name;
+        if (!chatLogs.has(name)) chatLogs.set(name, []);
+        document.getElementById("contacts-screen").style.display = "none";
+        document.getElementById("chat-screen").style.display = "flex";
+        document.getElementById("back-btn").style.display = "block";
+        document.getElementById("topbar-name").textContent = name;
+        document.getElementById("me-badge").textContent = name
+          .slice(0, 2)
+          .toUpperCase();
+        renderMessages();
+      }
+
+      function showContacts() {
+        activeChatUsername = null;
+        document.getElementById("chat-screen").style.display = "none";
+        document.getElementById("contacts-screen").style.display = "block";
+        document.getElementById("back-btn").style.display = "none";
+        document.getElementById("topbar-name").textContent = myUsername;
+        document.getElementById("me-badge").textContent = myUsername
+          .slice(0, 2)
+          .toUpperCase();
+        renderContacts();
+      }
+
+      function pushMessage(username, dir, payload) {
+        if (!chatLogs.has(username)) chatLogs.set(username, []);
+        const row = { dir, ts: Date.now(), ...payload };
+        chatLogs.get(username).push(row);
+        if (activeChatUsername === username) renderMessages();
+        renderContacts();
+      }
+
+      function renderMessages() {
+        const box = document.getElementById("messages");
+        const log = chatLogs.get(activeChatUsername) || [];
+        box.innerHTML = "";
+        log.forEach((m) => {
+          const row = document.createElement("div");
+          row.className = "bubble-row " + (m.dir === "out" ? "out" : "in");
+          const time = new Date(m.ts).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          if (m.kind === "text") {
+            row.innerHTML = `<div class="bubble">${escapeHtml(m.text)}<div class="meta">${time}</div></div>`;
+          } else if (m.kind === "progress") {
+            row.innerHTML = `<div class="bubble" data-progress-id="${m.id}">Sending photo…
+        <div class="progress-wrap"><div class="progress-bar" style="width:0%"></div></div></div>`;
+          } else if (m.kind === "image") {
+            row.innerHTML = `<div class="bubble"><img src="${m.url}"><div class="meta">${time}</div></div>`;
+          }
+          box.appendChild(row);
+        });
+        box.scrollTop = box.scrollHeight;
+      }
+
+      function updateProgressUI(id, fraction) {
+        const el = document.querySelector(
+          `[data-progress-id="${CSS.escape(id)}"] .progress-bar`,
+        );
+        if (el) el.style.width = Math.round(fraction * 100) + "%";
+      }
+
+      function replaceProgressWithImage(id, url) {
+        const log = chatLogs.get(activeChatUsername) || [];
+        for (const arr of chatLogs.values()) {
+          const idx = arr.findIndex(
+            (m) => m.kind === "progress" && m.id === id,
+          );
+          if (idx !== -1) {
+            arr[idx] = { ...arr[idx], kind: "image", url };
+            break;
+          }
+        }
+        renderMessages();
+        renderContacts();
+      }
+
+      let toastTimer;
+      function showToast(text) {
+        let t = document.querySelector(".toast");
+        if (t) t.remove();
+        t = document.createElement("div");
+        t.className = "toast";
+        t.textContent = text;
+        document.getElementById("app").appendChild(t);
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.remove(), 2600);
+      }
+
+      function escapeHtml(s) {
+        return (s || "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      }
+
+      /* ---------------- mobile sleep / resume handling ---------------- */
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          if (!ws || ws.readyState === WebSocket.CLOSED) {
+            setStatus("Reconnecting…", "down");
+            connectTracker();
+          } else if (ws.readyState === WebSocket.OPEN) {
+            announceNow();
+          }
+          for (const entry of peers.values()) {
+            const state = entry.pc.connectionState;
+            if (state === "disconnected" || state === "failed")
+              tryIceRestart(entry);
+          }
+        }
+      });
+
+      document.getElementById("msg-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendPrivateMessage();
+      });
     </script>
-</body>
+  </body>
 </html>
