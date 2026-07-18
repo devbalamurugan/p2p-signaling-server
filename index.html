@@ -1,1421 +1,808 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    />
-    <title>Nearby — Pure P2P Chat</title>
-    <style>
-      :root {
-        --teal-dark: #0b3d3a;
-        --teal: #0f5e57;
-        --teal-mid: #12857a;
-        --mint: #3ddc97;
-        --bg: #e9f2ee;
-        --panel: #ffffff;
-        --bubble-out: #d7f3e3;
-        --bubble-in: #ffffff;
-        --ink: #0d2b26;
-        --ink-soft: #5c7a74;
-        --danger: #e0574c;
-        --amber: #e0a83b;
-        --radius: 18px;
-        --shadow: 0 8px 24px rgba(11, 61, 58, 0.1);
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        background:
-          radial-gradient(
-            circle at 15% 8%,
-            rgba(61, 220, 151, 0.1),
-            transparent 40%
-          ),
-          radial-gradient(
-            circle at 85% 92%,
-            rgba(15, 94, 87, 0.08),
-            transparent 45%
-          ),
-          var(--bg);
-        color: var(--ink);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100%;
-        padding: 0;
-      }
-      #app {
-        width: 100%;
-        max-width: 460px;
-        height: 100dvh;
-        max-height: 900px;
-        background: var(--panel);
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        overflow: hidden;
-        box-shadow: var(--shadow);
-      }
-      @media (min-width: 520px) {
-        #app {
-          height: 860px;
-          margin: 24px;
-          border-radius: 28px;
-        }
-      }
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Nearby — Pure P2P Chat</title>
+<style>
+  :root{
+    --teal-dark:#0b3d3a;
+    --teal:#0f5e57;
+    --teal-mid:#12857a;
+    --mint:#3ddc97;
+    --bg:#e9f2ee;
+    --panel:#ffffff;
+    --bubble-out:#d7f3e3;
+    --bubble-in:#ffffff;
+    --ink:#0d2b26;
+    --ink-soft:#5c7a74;
+    --danger:#e0574c;
+    --amber:#e0a83b;
+    --radius:18px;
+    --shadow: 0 8px 24px rgba(11,61,58,0.10);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:
+      radial-gradient(circle at 15% 8%, rgba(61,220,151,0.10), transparent 40%),
+      radial-gradient(circle at 85% 92%, rgba(15,94,87,0.08), transparent 45%),
+      var(--bg);
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    min-height:100%;
+    padding:0;
+  }
+  #app{
+    width:100%; max-width:460px; height:100dvh; max-height:900px;
+    background:var(--panel);
+    display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+    box-shadow: var(--shadow);
+  }
+  @media (min-width:520px){
+    #app{ height:860px; margin:24px; border-radius:28px; }
+  }
 
-      /* ---------- LOGIN ---------- */
-      #login-screen {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 32px;
-        text-align: center;
-        background: linear-gradient(
-          160deg,
-          var(--teal-dark),
-          var(--teal) 60%,
-          var(--teal-mid)
-        );
-        color: #eafff6;
-      }
-      .logo-mark {
-        width: 74px;
-        height: 74px;
-        border-radius: 22px;
-        background: linear-gradient(145deg, var(--mint), #1fbf8a);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        margin-bottom: 18px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-      }
-      #login-screen h1 {
-        font-size: 1.5rem;
-        margin: 0 0 4px;
-        letter-spacing: -0.02em;
-      }
-      #login-screen p.tag {
-        opacity: 0.75;
-        font-size: 0.85rem;
-        margin: 0 0 28px;
-        max-width: 280px;
-        line-height: 1.5;
-      }
-      #username {
-        width: 100%;
-        max-width: 280px;
-        padding: 14px 16px;
-        border-radius: 14px;
-        border: none;
-        background: rgba(255, 255, 255, 0.12);
-        color: #fff;
-        font-size: 1rem;
-        outline: none;
-        border: 1px solid rgba(255, 255, 255, 0.25);
-      }
-      #username::placeholder {
-        color: rgba(255, 255, 255, 0.55);
-      }
-      #username:focus {
-        border-color: var(--mint);
-        background: rgba(255, 255, 255, 0.18);
-      }
-      #enter-btn {
-        margin-top: 16px;
-        width: 100%;
-        max-width: 280px;
-        padding: 14px;
-        border: none;
-        border-radius: 14px;
-        background: var(--mint);
-        color: #04241c;
-        font-weight: 700;
-        font-size: 0.95rem;
-        cursor: pointer;
-        letter-spacing: 0.01em;
-      }
-      #enter-btn:active {
-        transform: scale(0.98);
-      }
-      .login-note {
-        margin-top: 22px;
-        font-size: 0.72rem;
-        opacity: 0.55;
-        max-width: 280px;
-      }
+  /* ---------- LOGIN ---------- */
+  #login-screen{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:32px; text-align:center;
+    background: linear-gradient(160deg, var(--teal-dark), var(--teal) 60%, var(--teal-mid));
+    color:#eafff6;
+  }
+  .logo-mark{
+    width:74px;height:74px;border-radius:22px;
+    background:linear-gradient(145deg,var(--mint),#1fbf8a);
+    display:flex;align-items:center;justify-content:center;
+    font-size:32px; margin-bottom:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  }
+  #login-screen h1{ font-size:1.5rem; margin:0 0 4px; letter-spacing:-0.02em; }
+  #login-screen p.tag{ opacity:0.75; font-size:0.85rem; margin:0 0 28px; max-width:280px; line-height:1.5;}
+  #username{
+    width:100%; max-width:280px; padding:14px 16px; border-radius:14px; border:none;
+    background:rgba(255,255,255,0.12); color:#fff; font-size:1rem; outline:none;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+  #username::placeholder{color:rgba(255,255,255,0.55);}
+  #username:focus{border-color:var(--mint); background:rgba(255,255,255,0.18);}
+  #enter-btn{
+    margin-top:16px; width:100%; max-width:280px; padding:14px; border:none; border-radius:14px;
+    background:var(--mint); color:#04241c; font-weight:700; font-size:0.95rem; cursor:pointer;
+    letter-spacing:0.01em;
+  }
+  #enter-btn:active{transform:scale(0.98);}
+  .login-note{margin-top:22px; font-size:0.72rem; opacity:0.55; max-width:280px;}
 
-      /* ---------- MAIN SHELL ---------- */
-      #main-screen {
-        display: none;
-        flex-direction: column;
-        height: 100%;
-      }
-      header.topbar {
-        background: linear-gradient(120deg, var(--teal-dark), var(--teal));
-        color: #eafff6;
-        padding: 14px 16px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
-      }
-      header.topbar .me-badge {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.15);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.95rem;
-      }
-      header.topbar .titles {
-        flex: 1;
-        min-width: 0;
-      }
-      header.topbar .titles .name {
-        font-weight: 700;
-        font-size: 0.98rem;
-      }
-      header.topbar .titles .status {
-        font-size: 0.72rem;
-        opacity: 0.8;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
-      .dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--amber);
-        flex-shrink: 0;
-      }
-      .dot.live {
-        background: var(--mint);
-        box-shadow: 0 0 0 3px rgba(61, 220, 151, 0.25);
-      }
-      .dot.down {
-        background: var(--danger);
-      }
-      #back-btn {
-        display: none;
-        background: none;
-        border: none;
-        color: #eafff6;
-        font-size: 1.3rem;
-        cursor: pointer;
-        padding: 4px 8px 4px 0;
-      }
+  /* ---------- MAIN SHELL ---------- */
+  #main-screen{ display:none; flex-direction:column; height:100%; }
+  header.topbar{
+    background:linear-gradient(120deg,var(--teal-dark),var(--teal));
+    color:#eafff6; padding:14px 16px; display:flex; align-items:center; gap:10px;
+    flex-shrink:0;
+  }
+  header.topbar .me-badge{
+    width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,0.15);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;
+  }
+  header.topbar .titles{flex:1; min-width:0;}
+  header.topbar .titles .name{font-weight:700; font-size:0.98rem;}
+  header.topbar .titles .status{font-size:0.72rem; opacity:0.8; display:flex; align-items:center; gap:5px;}
+  .dot{width:7px;height:7px;border-radius:50%; background:var(--amber); flex-shrink:0;}
+  .dot.live{background:var(--mint); box-shadow:0 0 0 3px rgba(61,220,151,0.25);}
+  .dot.down{background:var(--danger);}
+  #back-btn{display:none; background:none;border:none;color:#eafff6;font-size:1.3rem;cursor:pointer;padding:4px 8px 4px 0;}
 
-      /* ---------- CONTACTS (people online) ---------- */
-      #contacts-screen {
-        flex: 1;
-        overflow-y: auto;
-        background: var(--panel);
-      }
-      .section-label {
-        padding: 14px 16px 6px;
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--ink-soft);
-        font-weight: 700;
-      }
-      .contact-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 16px;
-        cursor: pointer;
-        border-bottom: 1px solid #f0f5f3;
-      }
-      .contact-row:active {
-        background: #f2f9f6;
-      }
-      .avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        background: linear-gradient(135deg, var(--teal-mid), var(--mint));
-        color: #04241c;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        font-size: 1rem;
-      }
-      .contact-meta {
-        flex: 1;
-        min-width: 0;
-      }
-      .contact-meta .cname {
-        font-weight: 600;
-        font-size: 0.94rem;
-      }
-      .contact-meta .clast {
-        font-size: 0.78rem;
-        color: var(--ink-soft);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .chev {
-        color: #cfe0da;
-        font-size: 1.1rem;
-      }
-      #empty-contacts {
-        padding: 60px 30px;
-        text-align: center;
-        color: var(--ink-soft);
-      }
-      #empty-contacts .ic {
-        font-size: 2.2rem;
-        margin-bottom: 10px;
-      }
-      #empty-contacts .sub {
-        font-size: 0.8rem;
-        margin-top: 6px;
-        line-height: 1.5;
-      }
+  /* ---------- CONTACTS (people online) ---------- */
+  #contacts-screen{flex:1; overflow-y:auto; background:var(--panel);}
+  .section-label{padding:14px 16px 6px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:700;}
+  .contact-row{
+    display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; border-bottom:1px solid #f0f5f3;
+  }
+  .contact-row:active{background:#f2f9f6;}
+  .avatar{
+    width:44px;height:44px;border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg,var(--teal-mid),var(--mint)); color:#04241c;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;
+  }
+  .contact-meta{flex:1; min-width:0;}
+  .contact-meta .cname{font-weight:600; font-size:0.94rem;}
+  .contact-meta .clast{font-size:0.78rem; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .chev{color:#cfe0da; font-size:1.1rem;}
+  #empty-contacts{padding:60px 30px; text-align:center; color:var(--ink-soft);}
+  #empty-contacts .ic{font-size:2.2rem; margin-bottom:10px;}
+  #empty-contacts .sub{font-size:0.8rem; margin-top:6px; line-height:1.5;}
 
-      .manual-target {
-        margin: 10px 16px 4px;
-        padding: 10px 12px;
-        background: #f2f9f6;
-        border-radius: 14px;
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .manual-target input {
-        flex: 1;
-        border: none;
-        background: transparent;
-        outline: none;
-        font-size: 0.88rem;
-        color: var(--ink);
-      }
-      .manual-target button {
-        border: none;
-        background: var(--teal);
-        color: #fff;
-        border-radius: 10px;
-        padding: 8px 12px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        cursor: pointer;
-      }
+  .manual-target{
+    margin:10px 16px 4px; padding:10px 12px; background:#f2f9f6; border-radius:14px;
+    display:flex; gap:8px; align-items:center;
+  }
+  .manual-target input{
+    flex:1; border:none; background:transparent; outline:none; font-size:0.88rem; color:var(--ink);
+  }
+  .manual-target button{
+    border:none; background:var(--teal); color:#fff; border-radius:10px; padding:8px 12px; font-size:0.8rem; font-weight:700; cursor:pointer;
+  }
 
-      /* ---------- CHAT THREAD ---------- */
-      #chat-screen {
-        flex: 1;
-        display: none;
-        flex-direction: column;
-        min-height: 0;
-      }
-      #messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 14px 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        background:
-          radial-gradient(
-            circle at 20% 10%,
-            rgba(15, 94, 87, 0.05),
-            transparent 30%
-          ),
-          radial-gradient(
-            circle at 80% 80%,
-            rgba(61, 220, 151, 0.06),
-            transparent 35%
-          ),
-          #f5f9f7;
-      }
-      .bubble-row {
-        display: flex;
-      }
-      .bubble-row.out {
-        justify-content: flex-end;
-      }
-      .bubble {
-        max-width: 76%;
-        padding: 9px 12px;
-        border-radius: 16px;
-        font-size: 0.9rem;
-        line-height: 1.4;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-        word-wrap: break-word;
-      }
-      .bubble-row.out .bubble {
-        background: var(--bubble-out);
-        border-bottom-right-radius: 4px;
-      }
-      .bubble-row.in .bubble {
-        background: var(--bubble-in);
-        border-bottom-left-radius: 4px;
-      }
-      .bubble img {
-        max-width: 100%;
-        border-radius: 10px;
-        display: block;
-        margin-top: 4px;
-      }
-      .bubble .meta {
-        font-size: 0.62rem;
-        color: var(--ink-soft);
-        margin-top: 3px;
-        text-align: right;
-      }
-      .sys-row {
-        align-self: center;
-        font-size: 0.72rem;
-        color: var(--ink-soft);
-        background: #e4efea;
-        padding: 4px 10px;
-        border-radius: 10px;
-        margin: 4px 0;
-      }
-      .progress-wrap {
-        width: 150px;
-        height: 5px;
-        background: rgba(0, 0, 0, 0.08);
-        border-radius: 3px;
-        margin-top: 6px;
-        overflow: hidden;
-      }
-      .progress-bar {
-        height: 100%;
-        width: 0%;
-        background: var(--teal-mid);
-        transition: width 0.15s;
-      }
+  /* ---------- CHAT THREAD ---------- */
+  #chat-screen{flex:1; display:none; flex-direction:column; min-height:0;}
+  #messages{
+    flex:1; overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:6px;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(15,94,87,0.05), transparent 30%),
+      radial-gradient(circle at 80% 80%, rgba(61,220,151,0.06), transparent 35%),
+      #f5f9f7;
+  }
+  .bubble-row{display:flex;}
+  .bubble-row.out{justify-content:flex-end;}
+  .bubble{
+    max-width:76%; padding:9px 12px; border-radius:16px; font-size:0.9rem; line-height:1.4;
+    box-shadow:0 1px 2px rgba(0,0,0,0.06); word-wrap:break-word;
+  }
+  .bubble-row.out .bubble{background:var(--bubble-out); border-bottom-right-radius:4px;}
+  .bubble-row.in .bubble{background:var(--bubble-in); border-bottom-left-radius:4px;}
+  .bubble img{max-width:100%; border-radius:10px; display:block; margin-top:4px;}
+  .bubble .meta{font-size:0.62rem; color:var(--ink-soft); margin-top:3px; text-align:right;}
+  .sys-row{align-self:center; font-size:0.72rem; color:var(--ink-soft); background:#e4efea; padding:4px 10px; border-radius:10px; margin:4px 0;}
+  .progress-wrap{width:150px; height:5px; background:rgba(0,0,0,0.08); border-radius:3px; margin-top:6px; overflow:hidden;}
+  .progress-bar{height:100%; width:0%; background:var(--teal-mid); transition:width 0.15s;}
 
-      #composer {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 12px;
-        background: var(--panel);
-        border-top: 1px solid #eef3f1;
-        flex-shrink: 0;
-        padding-bottom: calc(10px + env(safe-area-inset-bottom));
-      }
-      #composer .icon-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: none;
-        background: #f0f5f3;
-        color: var(--teal);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.15rem;
-        cursor: pointer;
-        flex-shrink: 0;
-      }
-      #msg-input {
-        flex: 1;
-        border: none;
-        background: #f0f5f3;
-        border-radius: 20px;
-        padding: 10px 16px;
-        font-size: 0.9rem;
-        outline: none;
-      }
-      #send-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: none;
-        background: var(--teal);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.05rem;
-        cursor: pointer;
-        flex-shrink: 0;
-      }
-      #send-btn:disabled {
-        opacity: 0.4;
-      }
-      #image-input {
-        display: none;
-      }
+  #composer{
+    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    background:var(--panel); border-top:1px solid #eef3f1; flex-shrink:0;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  #composer .icon-btn{
+    width:40px;height:40px;border-radius:50%; border:none; background:#f0f5f3; color:var(--teal);
+    display:flex;align-items:center;justify-content:center; font-size:1.15rem; cursor:pointer; flex-shrink:0;
+  }
+  #msg-input{
+    flex:1; border:none; background:#f0f5f3; border-radius:20px; padding:10px 16px; font-size:0.9rem; outline:none;
+  }
+  #send-btn{
+    width:40px;height:40px;border-radius:50%; border:none; background:var(--teal); color:#fff;
+    display:flex;align-items:center;justify-content:center; font-size:1.05rem; cursor:pointer; flex-shrink:0;
+  }
+  #send-btn:disabled{opacity:0.4;}
+  #image-input{display:none;}
 
-      .toast {
-        position: absolute;
-        left: 50%;
-        bottom: 90px;
-        transform: translateX(-50%);
-        background: rgba(13, 43, 38, 0.92);
-        color: #eafff6;
-        padding: 9px 16px;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        z-index: 50;
-        max-width: 88%;
-        text-align: center;
-        box-shadow: var(--shadow);
-        animation: fadeUp 0.25s ease;
-      }
-      @keyframes fadeUp {
-        from {
-          opacity: 0;
-          transform: translate(-50%, 8px);
-        }
-        to {
-          opacity: 1;
-          transform: translate(-50%, 0);
-        }
-      }
+  .toast{
+    position:absolute; left:50%; bottom:90px; transform:translateX(-50%);
+    background:rgba(13,43,38,0.92); color:#eafff6; padding:9px 16px; border-radius:12px;
+    font-size:0.8rem; z-index:50; max-width:88%; text-align:center; box-shadow:var(--shadow);
+    animation:fadeUp 0.25s ease;
+  }
+  @keyframes fadeUp{from{opacity:0; transform:translate(-50%,8px);} to{opacity:1; transform:translate(-50%,0);}}
 
-      ::-webkit-scrollbar {
-        width: 0px;
-      }
+  ::-webkit-scrollbar{width:0px;}
 
-      /* ---------- DEBUG PANEL ---------- */
-      #debug-btn {
-        position: absolute;
-        right: 12px;
-        bottom: 12px;
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        background: rgba(13, 43, 38, 0.85);
-        color: #3ddc97;
-        border: none;
-        font-size: 1rem;
-        z-index: 60;
-        cursor: pointer;
-        box-shadow: var(--shadow);
-      }
-      #debug-panel {
-        position: absolute;
-        inset: 0;
-        background: rgba(6, 20, 18, 0.97);
-        color: #c9f5e2;
-        z-index: 70;
-        display: none;
-        flex-direction: column;
-        padding: 14px;
-      }
-      #debug-panel.open {
-        display: flex;
-      }
-      #debug-panel .dbg-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      #debug-panel .dbg-head b {
-        font-size: 0.85rem;
-        letter-spacing: 0.03em;
-      }
-      #debug-panel button.dbg-close {
-        background: #12857a;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 6px 10px;
-        font-size: 0.75rem;
-      }
-      #debug-log {
-        flex: 1;
-        overflow-y: auto;
-        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-        font-size: 0.68rem;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-break: break-all;
-      }
-      #debug-log div {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        padding: 3px 0;
-      }
-      #debug-log .tag-ok {
-        color: #3ddc97;
-      }
-      #debug-log .tag-warn {
-        color: #e0a83b;
-      }
-      #debug-log .tag-err {
-        color: #ff6b5e;
-      }
-      .dbg-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-      .dbg-actions button {
-        flex: 1;
-        padding: 8px;
-        border-radius: 10px;
-        border: none;
-        background: #123f39;
-        color: #c9f5e2;
-        font-size: 0.75rem;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="app">
-      <!-- LOGIN -->
-      <div id="login-screen">
-        <div class="logo-mark">🔒</div>
-        <h1>Nearby</h1>
-        <p class="tag">
-          Direct device-to-device chat. No server, no database, no logs —
-          messages exist only in RAM while your tab is open.
-        </p>
-        <input
-          type="text"
-          id="username"
-          placeholder="Pick a display name"
-          maxlength="20"
-        />
-        <button id="enter-btn" onclick="startApp()">Connect</button>
-        <div class="login-note">
-          Uses public WebTorrent trackers only to discover who else is nearby.
-          Chat and photos travel peer-to-peer, never through the tracker.
-        </div>
+  /* ---------- DEBUG PANEL ---------- */
+  #debug-btn{
+    position:absolute; right:12px; bottom:12px; width:38px;height:38px;border-radius:50%;
+    background:rgba(13,43,38,0.85); color:#3ddc97; border:none; font-size:1rem; z-index:60; cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  #debug-panel{
+    position:absolute; inset:0; background:rgba(6,20,18,0.97); color:#c9f5e2; z-index:70;
+    display:none; flex-direction:column; padding:14px;
+  }
+  #debug-panel.open{display:flex;}
+  #debug-panel .dbg-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  #debug-panel .dbg-head b{font-size:0.85rem; letter-spacing:0.03em;}
+  #debug-panel button.dbg-close{background:#12857a; color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:0.75rem;}
+  #debug-log{
+    flex:1; overflow-y:auto; font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size:0.68rem; line-height:1.5; white-space:pre-wrap; word-break:break-all;
+  }
+  #debug-log div{border-bottom:1px solid rgba(255,255,255,0.06); padding:3px 0;}
+  #debug-log .tag-ok{color:#3ddc97;}
+  #debug-log .tag-warn{color:#e0a83b;}
+  #debug-log .tag-err{color:#ff6b5e;}
+  .dbg-actions{display:flex; gap:8px; margin-top:8px;}
+  .dbg-actions button{flex:1; padding:8px; border-radius:10px; border:none; background:#123f39; color:#c9f5e2; font-size:0.75rem;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- LOGIN -->
+  <div id="login-screen">
+    <div class="logo-mark">🔒</div>
+    <h1>Nearby</h1>
+    <p class="tag">Direct device-to-device chat. No server, no database, no logs — messages exist only in RAM while your tab is open.</p>
+    <input type="text" id="username" placeholder="Pick a display name" maxlength="20">
+    <input type="text" id="relay-url" placeholder="wss://your-relay.onrender.com" style="margin-top:10px;">
+    <button id="enter-btn" onclick="startApp()">Connect</button>
+    <div class="login-note">Signaling runs through your own tiny relay (see index.js) — it only ever sees offer/answer/ice JSON, never your messages or photos. Chat and photos travel peer-to-peer once connected.</div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main-screen">
+    <header class="topbar">
+      <button id="back-btn" onclick="showContacts()">←</button>
+      <div class="me-badge" id="me-badge">?</div>
+      <div class="titles">
+        <div class="name" id="topbar-name">—</div>
+        <div class="status"><span class="dot" id="status-dot"></span><span id="status-text">Connecting…</span></div>
       </div>
+    </header>
 
-      <!-- MAIN -->
-      <div id="main-screen">
-        <header class="topbar">
-          <button id="back-btn" onclick="showContacts()">←</button>
-          <div class="me-badge" id="me-badge">?</div>
-          <div class="titles">
-            <div class="name" id="topbar-name">—</div>
-            <div class="status">
-              <span class="dot" id="status-dot"></span
-              ><span id="status-text">Connecting…</span>
-            </div>
-          </div>
-        </header>
-
-        <!-- Contacts / discovery list -->
-        <div id="contacts-screen">
-          <div class="section-label">Online nearby</div>
-          <div id="contact-list"></div>
-          <div id="empty-contacts">
-            <div class="ic">📡</div>
-            Looking for peers…
-            <div class="sub">
-              Open this page on another device with a different name to test the
-              connection. Both devices need to be online at the same time.
-            </div>
-          </div>
-          <div class="section-label" style="margin-top: 6px">
-            Or chat by exact name
-          </div>
-          <div class="manual-target">
-            <input
-              type="text"
-              id="manual-username"
-              placeholder="Type a friend's exact name"
-            />
-            <button onclick="openManualChat()">Open</button>
-          </div>
-        </div>
-
-        <!-- Chat thread -->
-        <div id="chat-screen">
-          <div id="messages"></div>
-          <div id="composer">
-            <button
-              class="icon-btn"
-              onclick="document.getElementById('image-input').click()"
-            >
-              📷
-            </button>
-            <input type="file" id="image-input" accept="image/*" />
-            <input type="text" id="msg-input" placeholder="Message" />
-            <button id="send-btn" onclick="sendPrivateMessage()">➤</button>
-          </div>
-        </div>
+    <!-- Contacts / discovery list -->
+    <div id="contacts-screen">
+      <div class="section-label">Online nearby</div>
+      <div id="contact-list"></div>
+      <div id="empty-contacts">
+        <div class="ic">📡</div>
+        Looking for peers…
+        <div class="sub">Open this page on another device with a different name to test the connection. Both devices need to be online at the same time.</div>
       </div>
-
-      <button id="debug-btn" onclick="toggleDebug()">🐞</button>
-      <div id="debug-panel">
-        <div class="dbg-head">
-          <b>DEBUG LOG</b>
-          <button class="dbg-close" onclick="toggleDebug()">Close</button>
-        </div>
-        <div id="debug-log"></div>
-        <div class="dbg-actions">
-          <button onclick="copyDebugLog()">Copy log</button>
-          <button onclick="clearDebugLog()">Clear</button>
-        </div>
+      <div class="section-label" style="margin-top:6px;">Or chat by exact name</div>
+      <div class="manual-target">
+        <input type="text" id="manual-username" placeholder="Type a friend's exact name">
+        <button onclick="openManualChat()">Open</button>
       </div>
     </div>
 
-    <script>
-      /* =========================================================================
-   NEARBY — Pure P2P chat over WebRTC, discovered via public WebTorrent
-   trackers speaking the ACTUAL tracker wire protocol (JSON-over-WS variant
-   of the BitTorrent tracker spec, as implemented by bittorrent-tracker /
-   WebTorrent). No custom relay schema — this is what the public trackers
-   really understand.
+    <!-- Chat thread -->
+    <div id="chat-screen">
+      <div id="messages"></div>
+      <div id="composer">
+        <button class="icon-btn" onclick="document.getElementById('image-input').click()">📷</button>
+        <input type="file" id="image-input" accept="image/*">
+        <input type="text" id="msg-input" placeholder="Message">
+        <button id="send-btn" onclick="sendPrivateMessage()">➤</button>
+      </div>
+    </div>
+  </div>
 
-   Design notes (read before extending):
-   - info_hash / peer_id are 20-byte values, transmitted as raw binary
-     strings inside JSON (one JS string code unit per byte). This matches
-     what the real tracker servers expect on the wire.
-   - Targeted 1:1 addressing does NOT exist at the tracker level — trackers
-     broadcast offers to `numwant` random swarm members. So we connect to
-     everyone we discover (small mesh) and resolve usernames AFTER the
-     RTCDataChannel opens via a one-time `hello` packet. The UI then filters
-     to whichever peer you tap on. This is the architecturally correct way
-     to get "chat by username" out of a swarm-based tracker.
-   - No TURN server is configured below (TURN_SERVERS is empty). On mobile
-     carrier networks with CGNAT (common on Jio/Airtel), pure STUN will fail
-     to connect a meaningful fraction of the time. Add a TURN server before
-     relying on this beyond same-Wi-Fi testing.
+  <button id="debug-btn" onclick="toggleDebug()">🐞</button>
+  <div id="debug-panel">
+    <div class="dbg-head">
+      <b>DEBUG LOG</b>
+      <button class="dbg-close" onclick="toggleDebug()">Close</button>
+    </div>
+    <div id="debug-log"></div>
+    <div class="dbg-actions">
+      <button onclick="copyDebugLog()">Copy log</button>
+      <button onclick="clearDebugLog()">Clear</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   NEARBY — Pure P2P chat over WebRTC, signaled through a small self-hosted
+   WebSocket relay (index.js in this project — deploy free on Render).
+
+   Why not public WebTorrent trackers: they don't reliably reach this device
+   at all (see debug log — WS ERROR before handshake even completes, most
+   likely carrier-network interference or tracker instability, both outside
+   our control). Owning the relay means: known-correct protocol, real
+   observability, and direct username-addressed signaling — which is what
+   this app wanted in the first place.
+
+   Protocol with the relay (all JSON over one WebSocket):
+     → {type:'register', username}
+     ← {type:'registered', username}
+     ← {type:'presence', users:[...]}            // broadcast on join/leave
+     → {type:'offer', to, sdp}   ← relayed to target with `from` added
+     → {type:'answer', to, sdp}  ← relayed to target with `from` added
+     → {type:'ice', to, candidate} ← relayed to target with `from` added
+   The relay never sees chat text or images — only these tiny control
+   messages needed to establish the direct RTCPeerConnection.
    ========================================================================= */
 
-      const ROOM_NAME = "global-webrtc-production-p2p-room-2026";
-      const TRACKER_URLS = [
-        "wss://tracker.openwebtorrent.com",
-        "wss://tracker.btorrent.xyz",
-        "wss://tracker.files.fm:7073/announce",
-      ];
-      // Add a TURN server here for reliable mobile-network connectivity, e.g.:
-      // { urls:'turn:your-turn-host:3478', username:'user', credential:'pass' }
-      const TURN_SERVERS = [];
-      const ICE_CONFIG = {
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-          ...TURN_SERVERS,
-        ],
-      };
+const DEFAULT_RELAY_URL = ''; // e.g. 'wss://nearby-relay.onrender.com' — hardcode after deploying, or leave blank and type it in on the login screen each time.
+const TURN_SERVERS = [];
+// Add a TURN server here for reliable mobile-network connectivity, e.g.:
+// { urls:'turn:your-turn-host:3478', username:'user', credential:'pass' }
+const ICE_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    ...TURN_SERVERS
+  ]
+};
 
-      const ANNOUNCE_INTERVAL_MS = 90 * 1000; // periodic re-announce / heartbeat
-      const NUMWANT = 8; // how many swarm peers to request per announce
-      const CHUNK_SIZE = 16 * 1024; // safe cross-browser datachannel chunk size
-      const BUFFERED_AMOUNT_LOW = 256 * 1024; // backpressure threshold
+const CHUNK_SIZE = 16 * 1024;             // safe cross-browser datachannel chunk size
+const BUFFERED_AMOUNT_LOW = 256 * 1024;   // backpressure threshold
+const HEARTBEAT_INTERVAL_MS = 25 * 1000;  // keep Render free-tier socket + mobile NAT alive
 
-      let myUsername = "";
-      let myPeerId = null; // Uint8Array(20)
-      let infoHash = null; // Uint8Array(20)
-      let ws = null;
-      let wsUrlIndex = 0;
-      let reconnectDelay = 1000;
-      let announceTimer = null;
+let myUsername = '';
+let relayUrl = '';
+let ws = null;
+let reconnectDelay = 1000;
+let heartbeatTimer = null;
+let onlineUsers = [];                    // usernames currently registered on the relay
 
-      const peers = new Map(); // peerIdHex -> { pc, dc, offerId, username, connectionState }
-      const usernameToPeerId = new Map();
-      const chatLogs = new Map(); // username -> [ {dir, kind, text/url, ts} ]
-      let activeChatUsername = null;
-      let incomingTransfers = new Map(); // transferId -> { meta, chunks:[], received }
-      let transferCounter = 1;
+const peers = new Map();                 // username -> { pc, dc, connectionState, pendingCandidates:[] }
+const chatLogs = new Map();              // username -> [ {dir, kind, text/url, ts} ]
+let activeChatUsername = null;
+let incomingTransfers = new Map();       // transferId (string) -> { meta, chunks:[], received, numericId }
+let transferCounter = 1;
 
-      /* ---------------- debug panel ---------------- */
-      function log(msg, level) {
-        const el = document.getElementById("debug-log");
-        const row = document.createElement("div");
-        row.className =
-          level === "err"
-            ? "tag-err"
-            : level === "warn"
-              ? "tag-warn"
-              : level === "ok"
-                ? "tag-ok"
-                : "";
-        const t = new Date().toLocaleTimeString([], { hour12: false });
-        row.textContent = `[${t}] ${msg}`;
-        el.appendChild(row);
-        el.scrollTop = el.scrollHeight;
-        while (el.children.length > 300) el.removeChild(el.firstChild);
-      }
-      function toggleDebug() {
-        document.getElementById("debug-panel").classList.toggle("open");
-      }
-      function clearDebugLog() {
-        document.getElementById("debug-log").innerHTML = "";
-      }
-      function copyDebugLog() {
-        const text = Array.from(document.querySelectorAll("#debug-log div"))
-          .map((d) => d.textContent)
-          .join("\n");
-        navigator.clipboard
-          ?.writeText(text)
-          .then(() => showToast("Log copied"))
-          .catch(() => showToast("Copy failed — select manually"));
-      }
+/* ---------------- debug panel ---------------- */
+function log(msg, level){
+  const el = document.getElementById('debug-log');
+  const row = document.createElement('div');
+  row.className = level === 'err' ? 'tag-err' : level === 'warn' ? 'tag-warn' : level === 'ok' ? 'tag-ok' : '';
+  const t = new Date().toLocaleTimeString([], {hour12:false});
+  row.textContent = `[${t}] ${msg}`;
+  el.appendChild(row);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 300) el.removeChild(el.firstChild);
+}
+function toggleDebug(){
+  document.getElementById('debug-panel').classList.toggle('open');
+}
+function clearDebugLog(){ document.getElementById('debug-log').innerHTML=''; }
+function copyDebugLog(){
+  const text = Array.from(document.querySelectorAll('#debug-log div')).map(d=>d.textContent).join('\n');
+  navigator.clipboard?.writeText(text).then(()=>showToast('Log copied')).catch(()=>showToast('Copy failed — select manually'));
+}
 
-      /* ---------------- byte helpers ---------------- */
-      function randomBytes(n) {
-        const b = new Uint8Array(n);
-        crypto.getRandomValues(b);
-        return b;
-      }
-      function bytesToBinaryString(bytes) {
-        let s = "";
-        for (let i = 0; i < bytes.length; i++)
-          s += String.fromCharCode(bytes[i]);
-        return s;
-      }
-      async function sha1_20(str) {
-        const enc = new TextEncoder().encode(str);
-        const digest = await crypto.subtle.digest("SHA-1", enc);
-        return new Uint8Array(digest); // 20 bytes exactly
-      }
-      function hex(bytes) {
-        return Array.from(bytes)
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
-      }
-      function randomHexId(len = 16) {
-        return hex(randomBytes(len / 2));
-      }
+/* ---------------- app bootstrap ---------------- */
+async function startApp(){
+  const val = document.getElementById('username').value.trim();
+  if (!val) return alert('Enter a display name first');
+  const typedRelay = document.getElementById('relay-url').value.trim();
+  relayUrl = typedRelay || DEFAULT_RELAY_URL || localStorage.getItem('nearby-relay-url') || '';
+  if (!relayUrl){
+    return alert('Enter your relay server URL (wss://...) — deploy index.js on Render first.');
+  }
+  try { localStorage.setItem('nearby-relay-url', relayUrl); } catch(e){}
+  myUsername = val;
+  log('Starting as "' + myUsername + '" via relay ' + relayUrl);
 
-      /* ---------------- app bootstrap ---------------- */
-      async function startApp() {
-        const val = document.getElementById("username").value.trim();
-        if (!val) return alert("Enter a display name first");
-        myUsername = val;
-        myPeerId = randomBytes(20);
-        infoHash = await sha1_20(ROOM_NAME);
-        log(
-          "Identity ready. peer_id=" +
-            hex(myPeerId) +
-            " info_hash=" +
-            hex(infoHash),
-        );
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'flex';
+  document.getElementById('me-badge').textContent = myUsername.slice(0,2).toUpperCase();
+  document.getElementById('topbar-name').textContent = myUsername;
 
-        document.getElementById("login-screen").style.display = "none";
-        document.getElementById("main-screen").style.display = "flex";
-        document.getElementById("me-badge").textContent = myUsername
-          .slice(0, 2)
-          .toUpperCase();
-        document.getElementById("topbar-name").textContent = myUsername;
+  connectRelay();
+}
 
-        connectTracker();
-      }
+/* ---------------- relay signaling ---------------- */
+function connectRelay(){
+  setStatus('Connecting to relay…', 'connecting');
+  log('Connecting → ' + relayUrl);
+  ws = new WebSocket(relayUrl);
 
-      /* ---------------- tracker signaling (real wire protocol) ---------------- */
-      function connectTracker() {
-        const url = TRACKER_URLS[wsUrlIndex % TRACKER_URLS.length];
-        setStatus("Connecting to tracker…", "connecting");
-        log(`Connecting → ${url}`);
-        ws = new WebSocket(url);
+  ws.onopen = () => {
+    reconnectDelay = 1000;
+    log('WS OPEN ' + relayUrl, 'ok');
+    ws.send(JSON.stringify({ type:'register', username: myUsername }));
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type:'ping' }));
+    }, HEARTBEAT_INTERVAL_MS);
+  };
 
-        ws.onopen = () => {
-          reconnectDelay = 1000;
-          setStatus("Online", "live");
-          log(`WS OPEN ${url}`, "ok");
-          announceNow("started");
-          if (announceTimer) clearInterval(announceTimer);
-          announceTimer = setInterval(
-            () => announceNow(),
-            ANNOUNCE_INTERVAL_MS,
-          );
-        };
+  ws.onmessage = (event) => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch(e){
+      log('WS message not JSON: ' + String(event.data).slice(0,120), 'warn');
+      return;
+    }
+    if (msg.type !== 'presence') log('WS msg ← ' + JSON.stringify(msg).slice(0,200));
+    handleRelayMessage(msg);
+  };
 
-        ws.onmessage = (event) => {
-          let msg;
-          try {
-            msg = JSON.parse(event.data);
-          } catch (e) {
-            log(
-              "WS message not JSON: " + String(event.data).slice(0, 120),
-              "warn",
-            );
-            return;
-          }
-          log("WS msg ← " + JSON.stringify(msg).slice(0, 200));
-          handleTrackerMessage(msg);
-        };
+  ws.onclose = (ev) => {
+    setStatus('Reconnecting…', 'down');
+    log(`WS CLOSED code=${ev.code} reason="${ev.reason}" wasClean=${ev.wasClean}`, 'err');
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    setTimeout(connectRelay, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 1.7, 20000);
+  };
 
-        ws.onclose = (ev) => {
-          setStatus("Reconnecting…", "down");
-          log(
-            `WS CLOSED ${url} code=${ev.code} reason="${ev.reason}" wasClean=${ev.wasClean}`,
-            "err",
-          );
-          if (announceTimer) clearInterval(announceTimer);
-          wsUrlIndex++;
-          setTimeout(connectTracker, reconnectDelay);
-          reconnectDelay = Math.min(reconnectDelay * 1.7, 20000);
-        };
+  ws.onerror = () => { log('WS ERROR ' + relayUrl, 'err'); try{ ws.close(); }catch(e){} };
+}
 
-        ws.onerror = (e) => {
-          log("WS ERROR " + url, "err");
-          try {
-            ws.close();
-          } catch (e) {}
-        };
-      }
+function relaySend(obj){
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
 
-      async function announceNow(event) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+async function handleRelayMessage(msg){
+  if (msg.type === 'registered'){
+    setStatus('Online', 'live');
+    log('Registered as "' + msg.username + '"', 'ok');
+    return;
+  }
 
-        // create fresh offers for however many extra peers we still want
-        const wantMore = Math.max(0, NUMWANT - peers.size);
-        const offers = [];
-        for (let i = 0; i < wantMore; i++) {
-          const offerId = randomHexId(16);
-          const pc = createPeerConnection(null, offerId, true);
-          try {
-            const offer = await pc.pc.createOffer();
-            await pc.pc.setLocalDescription(offer);
-            offers.push({
-              offer_id: offerId,
-              offer: { type: offer.type, sdp: offer.sdp },
-            });
-            pc.pendingOfferId = offerId;
-          } catch (e) {
-            log("createOffer failed: " + e, "err");
-          }
-        }
+  if (msg.type === 'presence'){
+    onlineUsers = (msg.users || []).filter(u => u !== myUsername);
+    renderContacts();
+    return;
+  }
 
-        const packet = {
-          action: "announce",
-          info_hash: bytesToBinaryString(infoHash),
-          peer_id: bytesToBinaryString(myPeerId),
-          numwant: offers.length,
-          uploaded: 0,
-          downloaded: 0,
-          left: 0,
-        };
-        if (event) packet.event = event;
-        if (offers.length) packet.offers = offers;
+  if (msg.type === 'error'){
+    log('Relay error: ' + msg.reason + (msg.to ? ' (to '+msg.to+')' : ''), 'warn');
+    if (msg.reason === 'peer-offline') showToast((msg.to||'Peer') + ' went offline');
+    return;
+  }
 
-        log(
-          `Announce → numwant=${offers.length} event=${event || "-"} peer_id=${hex(myPeerId).slice(0, 8)}…`,
-        );
-        ws.send(JSON.stringify(packet));
-      }
+  if (msg.type === 'offer'){
+    log('Offer received from "' + msg.from + '"', 'ok');
+    await receiveOffer(msg.from, msg.sdp);
+    return;
+  }
 
-      function handleTrackerMessage(msg) {
-        if (msg.action !== "announce" && msg.action !== "answer") {
-          log("Ignoring tracker msg with action=" + msg.action, "warn");
-          return;
-        }
+  if (msg.type === 'answer'){
+    const entry = peers.get(msg.from);
+    if (entry){
+      log('Answer received from "' + msg.from + '"', 'ok');
+      try{
+        await entry.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        drainPendingCandidates(entry);
+      }catch(e){ log('setRemoteDescription(answer) failed: ' + e, 'err'); }
+    } else {
+      log('Answer from "' + msg.from + '" but no pending connection', 'warn');
+    }
+    return;
+  }
 
-        // Incoming OFFER relayed from another peer in the swarm
-        if (msg.offer && msg.offer_id && msg.peer_id) {
-          const fromHex = hex(binaryStringToBytes(msg.peer_id));
-          if (fromHex === hex(myPeerId)) return; // ignore echoes of our own
-          log("Offer received from peer " + fromHex.slice(0, 8) + "…", "ok");
-          receiveOffer(fromHex, msg.offer_id, msg.offer);
-          return;
-        }
+  if (msg.type === 'ice'){
+    const entry = peers.get(msg.from);
+    if (!entry) return;
+    if (entry.pc.remoteDescription){
+      try{ await entry.pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); }
+      catch(e){ log('addIceCandidate failed: ' + e, 'warn'); }
+    } else {
+      entry.pendingCandidates.push(msg.candidate);
+    }
+    return;
+  }
+}
 
-        // Incoming ANSWER to an offer we sent
-        if (msg.answer && msg.offer_id) {
-          const entry = findPeerByOfferId(msg.offer_id);
-          if (entry) {
-            log("Answer received for offer_id " + msg.offer_id, "ok");
-            entry.pc
-              .setRemoteDescription(new RTCSessionDescription(msg.answer))
-              .catch((err) =>
-                log("setRemoteDescription(answer) failed: " + err, "err"),
-              );
-          } else {
-            log(
-              "Answer received but no matching pending offer_id " +
-                msg.offer_id,
-              "warn",
-            );
-          }
-          return;
-        }
+function drainPendingCandidates(entry){
+  while (entry.pendingCandidates.length){
+    const c = entry.pendingCandidates.shift();
+    entry.pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => log('addIceCandidate (drained) failed: ' + e, 'warn'));
+  }
+}
 
-        log(
-          "Announce ack (no offer/answer payload): interval=" +
-            msg.interval +
-            " complete=" +
-            msg.complete +
-            " incomplete=" +
-            msg.incomplete,
-        );
-      }
+/* ---------------- WebRTC peer connections (one per username) ---------------- */
+function getOrCreatePeer(username, isInitiator){
+  let entry = peers.get(username);
+  if (entry) return entry;
 
-      function binaryStringToBytes(str) {
-        const b = new Uint8Array(str.length);
-        for (let i = 0; i < str.length; i++) b[i] = str.charCodeAt(i) & 0xff;
-        return b;
-      }
-      function findPeerByOfferId(offerId) {
-        for (const entry of peers.values()) {
-          if (entry.pendingOfferId === offerId) return entry;
-        }
-        return null;
-      }
+  const pc = new RTCPeerConnection(ICE_CONFIG);
+  entry = { pc, dc:null, connectionState:'new', pendingCandidates: [] };
+  peers.set(username, entry);
 
-      /* ---------------- WebRTC peer connections ---------------- */
-      function createPeerConnection(remotePeerIdHex, offerId, isInitiator) {
-        const pc = new RTCPeerConnection(ICE_CONFIG);
-        const entry = {
-          pc,
-          dc: null,
-          offerId,
-          pendingOfferId: null,
-          username: null,
-          connectionState: "new",
-        };
+  pc.onicecandidate = (e) => {
+    if (e.candidate) relaySend({ type:'ice', to: username, candidate: e.candidate });
+  };
 
-        pc.onicecandidate = (e) => {
-          // Trickle ICE isn't part of this tracker's simple offer/answer relay —
-          // candidates are bundled in the SDP (default browser behavior waits
-          // briefly then includes them), so nothing to send here explicitly.
-        };
+  pc.onconnectionstatechange = () => {
+    entry.connectionState = pc.connectionState;
+    log('PeerConnection("' + username + '") state → ' + pc.connectionState,
+        pc.connectionState==='connected'?'ok':pc.connectionState==='failed'?'err':undefined);
+    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected'){
+      tryIceRestart(entry);
+    }
+    if (pc.connectionState === 'closed' || pc.connectionState === 'failed'){
+      cleanupPeer(username);
+    }
+    renderContacts();
+  };
+  pc.oniceconnectionstatechange = () => {
+    log('ICE("' + username + '") state → ' + pc.iceConnectionState);
+  };
 
-        pc.onconnectionstatechange = () => {
-          entry.connectionState = pc.connectionState;
-          log(
-            "PeerConnection state → " +
-              pc.connectionState +
-              (remotePeerIdHex
-                ? " (peer " + remotePeerIdHex.slice(0, 8) + "…)"
-                : ""),
-            pc.connectionState === "connected"
-              ? "ok"
-              : pc.connectionState === "failed"
-                ? "err"
-                : undefined,
-          );
-          if (
-            pc.connectionState === "failed" ||
-            pc.connectionState === "disconnected"
-          ) {
-            tryIceRestart(entry);
-          }
-          if (
-            pc.connectionState === "closed" ||
-            pc.connectionState === "failed"
-          ) {
-            cleanupPeer(remotePeerIdHex);
-          }
-        };
-        pc.oniceconnectionstatechange = () => {
-          log("ICE state → " + pc.iceConnectionState);
-        };
+  if (isInitiator){
+    const dc = pc.createDataChannel('nearby-data');
+    wireDataChannel(username, entry, dc);
+  } else {
+    pc.ondatachannel = (e) => wireDataChannel(username, entry, e.channel);
+  }
 
-        if (isInitiator) {
-          const dc = pc.createDataChannel("nearby-data");
-          wireDataChannel(entry, dc);
-        } else {
-          pc.ondatachannel = (e) => wireDataChannel(entry, e.channel);
-        }
+  return entry;
+}
 
-        const key = remotePeerIdHex || "pending-" + offerId;
-        peers.set(key, entry);
-        return entry;
-      }
+async function initiateConnection(username){
+  if (peers.has(username)) return;
+  log('Initiating connection to "' + username + '"');
+  const entry = getOrCreatePeer(username, true);
+  try{
+    const offer = await entry.pc.createOffer();
+    await entry.pc.setLocalDescription(offer);
+    relaySend({ type:'offer', to: username, sdp: { type: offer.type, sdp: offer.sdp } });
+  }catch(e){ log('createOffer failed: ' + e, 'err'); }
+}
 
-      function tryIceRestart(entry) {
-        if (entry.pc.restartIce) {
-          try {
-            entry.pc.restartIce();
-          } catch (e) {}
-        }
-      }
+async function receiveOffer(fromUser, sdp){
+  const entry = getOrCreatePeer(fromUser, false);
+  try{
+    await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    drainPendingCandidates(entry);
+    const answer = await entry.pc.createAnswer();
+    await entry.pc.setLocalDescription(answer);
+    relaySend({ type:'answer', to: fromUser, sdp: { type: answer.type, sdp: answer.sdp } });
+  }catch(e){ log('receiveOffer failed: ' + e, 'err'); }
+}
 
-      function cleanupPeer(peerIdHex) {
-        const entry = peers.get(peerIdHex);
-        if (entry && entry.username) {
-          usernameToPeerId.delete(entry.username);
-          renderContacts();
-          if (activeChatUsername === entry.username)
-            setStatus("Peer disconnected", "down");
-        }
-        peers.delete(peerIdHex);
-      }
+function tryIceRestart(entry){
+  if (entry.pc.restartIce){
+    try{ entry.pc.restartIce(); }catch(e){}
+  }
+}
 
-      async function receiveOffer(fromHex, offerId, offer) {
-        if (peers.has(fromHex)) return; // already connected/connecting to this peer
-        const entry = createPeerConnection(fromHex, offerId, false);
-        peers.delete("pending-" + offerId);
-        peers.set(fromHex, entry);
+function cleanupPeer(username){
+  peers.delete(username);
+  renderContacts();
+  if (activeChatUsername === username) setStatus('Peer disconnected', 'down');
+}
 
-        await entry.pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await entry.pc.createAnswer();
-        await entry.pc.setLocalDescription(answer);
+function wireDataChannel(username, entry, dc){
+  entry.dc = dc;
+  dc.binaryType = 'arraybuffer';
+  dc.bufferedAmountLowThreshold = BUFFERED_AMOUNT_LOW;
 
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              action: "announce",
-              info_hash: bytesToBinaryString(infoHash),
-              peer_id: bytesToBinaryString(myPeerId),
-              to_peer_id: bytesToBinaryString(
-                binaryStringToBytesFromHex(fromHex),
-              ),
-              answer: { type: answer.type, sdp: answer.sdp },
-              offer_id: offerId,
-            }),
-          );
-        }
-      }
-      function binaryStringToBytesFromHex(hexStr) {
-        const bytes = new Uint8Array(hexStr.length / 2);
-        for (let i = 0; i < bytes.length; i++)
-          bytes[i] = parseInt(hexStr.substr(i * 2, 2), 16);
-        return bytes;
-      }
+  dc.onopen = () => {
+    log('DataChannel OPEN with "' + username + '"', 'ok');
+    if (!chatLogs.has(username)) chatLogs.set(username, []);
+    renderContacts();
+    if (activeChatUsername === username) setStatus('Online', 'live');
+  };
 
-      function wireDataChannel(entry, dc) {
-        entry.dc = dc;
-        dc.binaryType = "arraybuffer";
-        dc.bufferedAmountLowThreshold = BUFFERED_AMOUNT_LOW;
+  dc.onmessage = (event) => {
+    if (typeof event.data === 'string'){
+      handleControlMessage(username, JSON.parse(event.data));
+    } else {
+      handleBinaryChunk(username, event.data);
+    }
+  };
 
-        dc.onopen = () => {
-          finalizePeerKey(entry);
-          log('DataChannel OPEN, sending hello as "' + myUsername + '"', "ok");
-          dc.send(JSON.stringify({ t: "hello", u: myUsername }));
-        };
+  dc.onclose = () => {
+    log('DataChannel closed with "' + username + '"', 'warn');
+  };
+}
 
-        dc.onmessage = (event) => {
-          if (typeof event.data === "string") {
-            handleControlMessage(entry, JSON.parse(event.data));
-          } else {
-            handleBinaryChunk(entry, event.data);
-          }
-        };
+function handleControlMessage(username, msg){
+  if (msg.t === 'text'){
+    pushMessage(username, 'in', { kind:'text', text: msg.text });
+    return;
+  }
+  if (msg.t === 'image-start'){
+    incomingTransfers.set(msg.id, {
+      meta: msg, chunks: new Array(msg.totalChunks), received: 0, numericId: msg.numericId
+    });
+    pushMessage(username, 'in', { kind:'progress', id: msg.id });
+    return;
+  }
+}
 
-        dc.onclose = () => {
-          log("DataChannel closed", "warn");
-          for (const [key, val] of peers.entries()) {
-            if (val === entry) cleanupPeer(key);
-          }
-        };
-      }
+function handleBinaryChunk(username, buf){
+  const view = new DataView(buf);
+  const transferId = view.getUint32(0, true);
+  const chunkData = buf.slice(4);
 
-      function finalizePeerKey(entry) {
-        // no-op placeholder: keys are already set correctly at creation time for
-        // both initiator (peer id unknown until hello) and receiver (known) paths.
-      }
+  let target = null, targetKey = null;
+  for (const [key, t] of incomingTransfers.entries()){
+    if (t.numericId === transferId){ target = t; targetKey = key; break; }
+  }
+  if (!target) return;
 
-      function handleControlMessage(entry, msg) {
-        if (msg.t === "hello") {
-          entry.username = msg.u;
-          usernameToPeerId.set(msg.u, entry);
-          log('Hello received from "' + msg.u + '" — peer resolved', "ok");
-          renderContacts();
-          if (!chatLogs.has(msg.u)) chatLogs.set(msg.u, []);
-          return;
-        }
-        if (msg.t === "text") {
-          pushMessage(entry.username, "in", { kind: "text", text: msg.text });
-          return;
-        }
-        if (msg.t === "image-start") {
-          incomingTransfers.set(msg.id, {
-            meta: msg,
-            chunks: new Array(msg.totalChunks),
-            received: 0,
-            numericId: msg.numericId,
-          });
-          pushMessage(entry.username, "in", { kind: "progress", id: msg.id });
-          return;
-        }
-      }
+  target.chunks[target.received] = chunkData;
+  target.received++;
+  updateProgressUI(targetKey, target.received / target.meta.totalChunks);
 
-      function handleBinaryChunk(entry, buf) {
-        const view = new DataView(buf);
-        const transferId = view.getUint32(0, true);
-        const idStr = String(transferId);
-        const chunkData = buf.slice(4);
+  if (target.received >= target.meta.totalChunks){
+    const blob = new Blob(target.chunks, { type: target.meta.mime || 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    replaceProgressWithImage(targetKey, url);
+    incomingTransfers.delete(targetKey);
+  }
+}
 
-        // find the transfer whose id matches (we encode a numeric alias -> string map)
-        let target = null,
-          targetKey = null;
-        for (const [key, t] of incomingTransfers.entries()) {
-          if (t.numericId === transferId) {
-            target = t;
-            targetKey = key;
-            break;
-          }
-        }
-        if (!target) return;
+/* ---------------- sending: text ---------------- */
+async function sendPrivateMessage(){
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text || !activeChatUsername) return;
+  const entry = await ensureConnected(activeChatUsername);
+  if (!entry) return;
+  entry.dc.send(JSON.stringify({ t:'text', text }));
+  pushMessage(activeChatUsername, 'out', { kind:'text', text });
+  input.value = '';
+}
 
-        target.chunks[target.received] = chunkData;
-        target.received++;
-        updateProgressUI(targetKey, target.received / target.meta.totalChunks);
+async function ensureConnected(username){
+  let entry = peers.get(username);
+  if (entry && entry.dc && entry.dc.readyState === 'open') return entry;
+  if (!entry) await initiateConnection(username);
+  showToast('Connecting to ' + username + '…');
+  return null;
+}
 
-        if (target.received >= target.meta.totalChunks) {
-          const blob = new Blob(target.chunks, {
-            type: target.meta.mime || "image/jpeg",
-          });
-          const url = URL.createObjectURL(blob);
-          replaceProgressWithImage(targetKey, url);
-          incomingTransfers.delete(targetKey);
-        }
-      }
+/* ---------------- sending: chunked image ---------------- */
+document.getElementById('image-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !activeChatUsername) return;
+  const entry = await ensureConnected(activeChatUsername);
+  if (!entry) return;
+  await sendImageChunked(entry, file);
+});
 
-      /* ---------------- sending: text ---------------- */
-      function sendPrivateMessage() {
-        const input = document.getElementById("msg-input");
-        const text = input.value.trim();
-        if (!text || !activeChatUsername) return;
-        const entry = usernameToPeerId.get(activeChatUsername);
-        if (!entry || !entry.dc || entry.dc.readyState !== "open") {
-          return showToast("Still connecting to " + activeChatUsername + "…");
-        }
-        entry.dc.send(JSON.stringify({ t: "text", text }));
-        pushMessage(activeChatUsername, "out", { kind: "text", text });
-        input.value = "";
-      }
+async function sendImageChunked(entry, file){
+  const buf = await file.arrayBuffer();
+  const totalChunks = Math.ceil(buf.byteLength / CHUNK_SIZE);
+  const numericId = transferCounter++;
+  const localId = 'out-' + numericId;
 
-      /* ---------------- sending: chunked image ---------------- */
-      document
-        .getElementById("image-input")
-        .addEventListener("change", async (e) => {
-          const file = e.target.files[0];
-          e.target.value = "";
-          if (!file || !activeChatUsername) return;
-          const entry = usernameToPeerId.get(activeChatUsername);
-          if (!entry || !entry.dc || entry.dc.readyState !== "open") {
-            return showToast("Still connecting to " + activeChatUsername + "…");
-          }
-          await sendImageChunked(entry, file);
-        });
+  entry.dc.send(JSON.stringify({
+    t:'image-start', id: localId, numericId, name: file.name, mime: file.type,
+    size: buf.byteLength, totalChunks
+  }));
 
-      async function sendImageChunked(entry, file) {
-        const buf = await file.arrayBuffer();
-        const totalChunks = Math.ceil(buf.byteLength / CHUNK_SIZE);
-        const numericId = transferCounter++;
-        const localId = "out-" + numericId;
+  pushMessage(activeChatUsername, 'out', { kind:'progress', id: localId });
 
-        // numericId travels inside image-start so the receiver ties incoming
-        // binary chunks (which only carry the numeric id, to keep headers tiny)
-        // back to the right transfer.
-        entry.dc.send(
-          JSON.stringify({
-            t: "image-start",
-            id: localId,
-            numericId,
-            name: file.name,
-            mime: file.type,
-            size: buf.byteLength,
-            totalChunks,
-          }),
-        );
+  for (let i=0;i<totalChunks;i++){
+    if (entry.dc.readyState !== 'open') { showToast('Connection dropped mid-transfer'); return; }
+    while (entry.dc.bufferedAmount > BUFFERED_AMOUNT_LOW){
+      await new Promise(res => setTimeout(res, 30));
+    }
+    const start = i*CHUNK_SIZE;
+    const slice = buf.slice(start, start+CHUNK_SIZE);
+    const packet = new Uint8Array(4 + slice.byteLength);
+    new DataView(packet.buffer).setUint32(0, numericId, true);
+    packet.set(new Uint8Array(slice), 4);
+    entry.dc.send(packet.buffer);
+    updateProgressUI(localId, (i+1)/totalChunks);
+  }
+  const url = URL.createObjectURL(file);
+  replaceProgressWithImage(localId, url);
+}
 
-        pushMessage(activeChatUsername, "out", {
-          kind: "progress",
-          id: localId,
-        });
+/* ---------------- UI rendering ---------------- */
+function setStatus(text, kind){
+  document.getElementById('status-text').textContent = text;
+  const dot = document.getElementById('status-dot');
+  dot.className = 'dot' + (kind === 'live' ? ' live' : kind === 'down' ? ' down' : '');
+}
 
-        for (let i = 0; i < totalChunks; i++) {
-          if (entry.dc.readyState !== "open") {
-            showToast("Connection dropped mid-transfer");
-            return;
-          }
-          // backpressure: wait if too much is buffered
-          while (entry.dc.bufferedAmount > BUFFERED_AMOUNT_LOW) {
-            await new Promise((res) => setTimeout(res, 30));
-          }
-          const start = i * CHUNK_SIZE;
-          const slice = buf.slice(start, start + CHUNK_SIZE);
-          const packet = new Uint8Array(4 + slice.byteLength);
-          new DataView(packet.buffer).setUint32(0, numericId, true);
-          packet.set(new Uint8Array(slice), 4);
-          entry.dc.send(packet.buffer);
-          updateProgressUI(localId, (i + 1) / totalChunks);
-        }
-        // tag the numericId onto our own progress row's mirror image so it matches
-        // (sender doesn't need reassembly, just shows the local file preview)
-        const url = URL.createObjectURL(file);
-        replaceProgressWithImage(localId, url);
-      }
-
-      /* ---------------- UI rendering ---------------- */
-      function setStatus(text, kind) {
-        document.getElementById("status-text").textContent = text;
-        const dot = document.getElementById("status-dot");
-        dot.className =
-          "dot" + (kind === "live" ? " live" : kind === "down" ? " down" : "");
-      }
-
-      function renderContacts() {
-        const list = document.getElementById("contact-list");
-        const empty = document.getElementById("empty-contacts");
-        const names = Array.from(usernameToPeerId.keys());
-        list.innerHTML = "";
-        empty.style.display = names.length ? "none" : "block";
-        names.forEach((name) => {
-          const row = document.createElement("div");
-          row.className = "contact-row";
-          row.onclick = () => openChat(name);
-          const log = chatLogs.get(name) || [];
-          const last = log.length
-            ? log[log.length - 1].kind === "text"
-              ? log[log.length - 1].text
-              : "📷 Photo"
-            : "Say hi 👋";
-          row.innerHTML = `
-      <div class="avatar">${name.slice(0, 2).toUpperCase()}</div>
+function renderContacts(){
+  const list = document.getElementById('contact-list');
+  const empty = document.getElementById('empty-contacts');
+  list.innerHTML = '';
+  empty.style.display = onlineUsers.length ? 'none' : 'block';
+  onlineUsers.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'contact-row';
+    row.onclick = () => openChat(name);
+    const log = chatLogs.get(name) || [];
+    const peer = peers.get(name);
+    const connected = peer && peer.dc && peer.dc.readyState === 'open';
+    const last = log.length ? (log[log.length-1].kind === 'text' ? log[log.length-1].text : '📷 Photo')
+                             : (connected ? 'Say hi 👋' : 'Tap to connect');
+    row.innerHTML = `
+      <div class="avatar">${name.slice(0,2).toUpperCase()}</div>
       <div class="contact-meta">
         <div class="cname">${escapeHtml(name)}</div>
         <div class="clast">${escapeHtml(last)}</div>
       </div>
       <div class="chev">›</div>`;
-          list.appendChild(row);
-        });
-      }
+    list.appendChild(row);
+  });
+}
 
-      function openManualChat() {
-        const name = document.getElementById("manual-username").value.trim();
-        if (!name) return;
-        if (!usernameToPeerId.has(name)) {
-          return showToast(name + " isn't visible on the network yet");
-        }
-        openChat(name);
-      }
+function openManualChat(){
+  const name = document.getElementById('manual-username').value.trim();
+  if (!name) return;
+  if (!onlineUsers.includes(name)){
+    return showToast(name + ' isn\'t online on the relay right now');
+  }
+  openChat(name);
+}
 
-      function openChat(name) {
-        activeChatUsername = name;
-        if (!chatLogs.has(name)) chatLogs.set(name, []);
-        document.getElementById("contacts-screen").style.display = "none";
-        document.getElementById("chat-screen").style.display = "flex";
-        document.getElementById("back-btn").style.display = "block";
-        document.getElementById("topbar-name").textContent = name;
-        document.getElementById("me-badge").textContent = name
-          .slice(0, 2)
-          .toUpperCase();
-        renderMessages();
-      }
+function openChat(name){
+  activeChatUsername = name;
+  if (!chatLogs.has(name)) chatLogs.set(name, []);
+  document.getElementById('contacts-screen').style.display = 'none';
+  document.getElementById('chat-screen').style.display = 'flex';
+  document.getElementById('back-btn').style.display = 'block';
+  document.getElementById('topbar-name').textContent = name;
+  document.getElementById('me-badge').textContent = name.slice(0,2).toUpperCase();
+  renderMessages();
+  ensureConnected(name); // fire-and-forget: kicks off the handshake if not already connected
+}
 
-      function showContacts() {
-        activeChatUsername = null;
-        document.getElementById("chat-screen").style.display = "none";
-        document.getElementById("contacts-screen").style.display = "block";
-        document.getElementById("back-btn").style.display = "none";
-        document.getElementById("topbar-name").textContent = myUsername;
-        document.getElementById("me-badge").textContent = myUsername
-          .slice(0, 2)
-          .toUpperCase();
-        renderContacts();
-      }
+function showContacts(){
+  activeChatUsername = null;
+  document.getElementById('chat-screen').style.display = 'none';
+  document.getElementById('contacts-screen').style.display = 'block';
+  document.getElementById('back-btn').style.display = 'none';
+  document.getElementById('topbar-name').textContent = myUsername;
+  document.getElementById('me-badge').textContent = myUsername.slice(0,2).toUpperCase();
+  renderContacts();
+}
 
-      function pushMessage(username, dir, payload) {
-        if (!chatLogs.has(username)) chatLogs.set(username, []);
-        const row = { dir, ts: Date.now(), ...payload };
-        chatLogs.get(username).push(row);
-        if (activeChatUsername === username) renderMessages();
-        renderContacts();
-      }
+function pushMessage(username, dir, payload){
+  if (!chatLogs.has(username)) chatLogs.set(username, []);
+  const row = { dir, ts: Date.now(), ...payload };
+  chatLogs.get(username).push(row);
+  if (activeChatUsername === username) renderMessages();
+  renderContacts();
+}
 
-      function renderMessages() {
-        const box = document.getElementById("messages");
-        const log = chatLogs.get(activeChatUsername) || [];
-        box.innerHTML = "";
-        log.forEach((m) => {
-          const row = document.createElement("div");
-          row.className = "bubble-row " + (m.dir === "out" ? "out" : "in");
-          const time = new Date(m.ts).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-          if (m.kind === "text") {
-            row.innerHTML = `<div class="bubble">${escapeHtml(m.text)}<div class="meta">${time}</div></div>`;
-          } else if (m.kind === "progress") {
-            row.innerHTML = `<div class="bubble" data-progress-id="${m.id}">Sending photo…
+function renderMessages(){
+  const box = document.getElementById('messages');
+  const log = chatLogs.get(activeChatUsername) || [];
+  box.innerHTML = '';
+  log.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'bubble-row ' + (m.dir === 'out' ? 'out' : 'in');
+    const time = new Date(m.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    if (m.kind === 'text'){
+      row.innerHTML = `<div class="bubble">${escapeHtml(m.text)}<div class="meta">${time}</div></div>`;
+    } else if (m.kind === 'progress'){
+      row.innerHTML = `<div class="bubble" data-progress-id="${m.id}">Sending photo…
         <div class="progress-wrap"><div class="progress-bar" style="width:0%"></div></div></div>`;
-          } else if (m.kind === "image") {
-            row.innerHTML = `<div class="bubble"><img src="${m.url}"><div class="meta">${time}</div></div>`;
-          }
-          box.appendChild(row);
-        });
-        box.scrollTop = box.scrollHeight;
-      }
+    } else if (m.kind === 'image'){
+      row.innerHTML = `<div class="bubble"><img src="${m.url}"><div class="meta">${time}</div></div>`;
+    }
+    box.appendChild(row);
+  });
+  box.scrollTop = box.scrollHeight;
+}
 
-      function updateProgressUI(id, fraction) {
-        const el = document.querySelector(
-          `[data-progress-id="${CSS.escape(id)}"] .progress-bar`,
-        );
-        if (el) el.style.width = Math.round(fraction * 100) + "%";
-      }
+function updateProgressUI(id, fraction){
+  const el = document.querySelector(`[data-progress-id="${CSS.escape(id)}"] .progress-bar`);
+  if (el) el.style.width = Math.round(fraction*100) + '%';
+}
 
-      function replaceProgressWithImage(id, url) {
-        const log = chatLogs.get(activeChatUsername) || [];
-        for (const arr of chatLogs.values()) {
-          const idx = arr.findIndex(
-            (m) => m.kind === "progress" && m.id === id,
-          );
-          if (idx !== -1) {
-            arr[idx] = { ...arr[idx], kind: "image", url };
-            break;
-          }
-        }
-        renderMessages();
-        renderContacts();
-      }
+function replaceProgressWithImage(id, url){
+  for (const arr of chatLogs.values()){
+    const idx = arr.findIndex(m => m.kind === 'progress' && m.id === id);
+    if (idx !== -1){
+      arr[idx] = { ...arr[idx], kind:'image', url };
+      break;
+    }
+  }
+  renderMessages();
+  renderContacts();
+}
 
-      let toastTimer;
-      function showToast(text) {
-        let t = document.querySelector(".toast");
-        if (t) t.remove();
-        t = document.createElement("div");
-        t.className = "toast";
-        t.textContent = text;
-        document.getElementById("app").appendChild(t);
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => t.remove(), 2600);
-      }
+let toastTimer;
+function showToast(text){
+  let t = document.querySelector('.toast');
+  if (t) t.remove();
+  t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = text;
+  document.getElementById('app').appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.remove(), 2600);
+}
 
-      function escapeHtml(s) {
-        return (s || "").replace(
-          /[&<>"']/g,
-          (c) =>
-            ({
-              "&": "&amp;",
-              "<": "&lt;",
-              ">": "&gt;",
-              '"': "&quot;",
-              "'": "&#39;",
-            })[c],
-        );
-      }
+function escapeHtml(s){
+  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
-      /* ---------------- mobile sleep / resume handling ---------------- */
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-          if (!ws || ws.readyState === WebSocket.CLOSED) {
-            setStatus("Reconnecting…", "down");
-            connectTracker();
-          } else if (ws.readyState === WebSocket.OPEN) {
-            announceNow();
-          }
-          for (const entry of peers.values()) {
-            const state = entry.pc.connectionState;
-            if (state === "disconnected" || state === "failed")
-              tryIceRestart(entry);
-          }
-        }
-      });
+/* ---------------- mobile sleep / resume handling ---------------- */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible'){
+    if (!ws || ws.readyState === WebSocket.CLOSED){
+      setStatus('Reconnecting…', 'down');
+      connectRelay();
+    }
+    for (const [username, entry] of peers.entries()){
+      const state = entry.pc.connectionState;
+      if (state === 'disconnected' || state === 'failed') tryIceRestart(entry);
+    }
+  }
+});
 
-      document.getElementById("msg-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") sendPrivateMessage();
-      });
-    </script>
-  </body>
+document.getElementById('msg-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendPrivateMessage();
+});
+</script>
+</body>
 </html>
