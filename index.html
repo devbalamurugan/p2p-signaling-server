@@ -494,6 +494,90 @@
       ::-webkit-scrollbar {
         width: 0px;
       }
+
+      /* ---------- DEBUG PANEL ---------- */
+      #debug-btn {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: rgba(13, 43, 38, 0.85);
+        color: #3ddc97;
+        border: none;
+        font-size: 1rem;
+        z-index: 60;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+      }
+      #debug-panel {
+        position: absolute;
+        inset: 0;
+        background: rgba(6, 20, 18, 0.97);
+        color: #c9f5e2;
+        z-index: 70;
+        display: none;
+        flex-direction: column;
+        padding: 14px;
+      }
+      #debug-panel.open {
+        display: flex;
+      }
+      #debug-panel .dbg-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      #debug-panel .dbg-head b {
+        font-size: 0.85rem;
+        letter-spacing: 0.03em;
+      }
+      #debug-panel button.dbg-close {
+        background: #12857a;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+      }
+      #debug-log {
+        flex: 1;
+        overflow-y: auto;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.68rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      #debug-log div {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 3px 0;
+      }
+      #debug-log .tag-ok {
+        color: #3ddc97;
+      }
+      #debug-log .tag-warn {
+        color: #e0a83b;
+      }
+      #debug-log .tag-err {
+        color: #ff6b5e;
+      }
+      .dbg-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .dbg-actions button {
+        flex: 1;
+        padding: 8px;
+        border-radius: 10px;
+        border: none;
+        background: #123f39;
+        color: #c9f5e2;
+        font-size: 0.75rem;
+      }
     </style>
   </head>
   <body>
@@ -574,6 +658,19 @@
           </div>
         </div>
       </div>
+
+      <button id="debug-btn" onclick="toggleDebug()">🐞</button>
+      <div id="debug-panel">
+        <div class="dbg-head">
+          <b>DEBUG LOG</b>
+          <button class="dbg-close" onclick="toggleDebug()">Close</button>
+        </div>
+        <div id="debug-log"></div>
+        <div class="dbg-actions">
+          <button onclick="copyDebugLog()">Copy log</button>
+          <button onclick="clearDebugLog()">Clear</button>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -637,6 +734,40 @@
       let incomingTransfers = new Map(); // transferId -> { meta, chunks:[], received }
       let transferCounter = 1;
 
+      /* ---------------- debug panel ---------------- */
+      function log(msg, level) {
+        const el = document.getElementById("debug-log");
+        const row = document.createElement("div");
+        row.className =
+          level === "err"
+            ? "tag-err"
+            : level === "warn"
+              ? "tag-warn"
+              : level === "ok"
+                ? "tag-ok"
+                : "";
+        const t = new Date().toLocaleTimeString([], { hour12: false });
+        row.textContent = `[${t}] ${msg}`;
+        el.appendChild(row);
+        el.scrollTop = el.scrollHeight;
+        while (el.children.length > 300) el.removeChild(el.firstChild);
+      }
+      function toggleDebug() {
+        document.getElementById("debug-panel").classList.toggle("open");
+      }
+      function clearDebugLog() {
+        document.getElementById("debug-log").innerHTML = "";
+      }
+      function copyDebugLog() {
+        const text = Array.from(document.querySelectorAll("#debug-log div"))
+          .map((d) => d.textContent)
+          .join("\n");
+        navigator.clipboard
+          ?.writeText(text)
+          .then(() => showToast("Log copied"))
+          .catch(() => showToast("Copy failed — select manually"));
+      }
+
       /* ---------------- byte helpers ---------------- */
       function randomBytes(n) {
         const b = new Uint8Array(n);
@@ -670,6 +801,12 @@
         myUsername = val;
         myPeerId = randomBytes(20);
         infoHash = await sha1_20(ROOM_NAME);
+        log(
+          "Identity ready. peer_id=" +
+            hex(myPeerId) +
+            " info_hash=" +
+            hex(infoHash),
+        );
 
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("main-screen").style.display = "flex";
@@ -685,11 +822,13 @@
       function connectTracker() {
         const url = TRACKER_URLS[wsUrlIndex % TRACKER_URLS.length];
         setStatus("Connecting to tracker…", "connecting");
+        log(`Connecting → ${url}`);
         ws = new WebSocket(url);
 
         ws.onopen = () => {
           reconnectDelay = 1000;
           setStatus("Online", "live");
+          log(`WS OPEN ${url}`, "ok");
           announceNow("started");
           if (announceTimer) clearInterval(announceTimer);
           announceTimer = setInterval(
@@ -703,20 +842,30 @@
           try {
             msg = JSON.parse(event.data);
           } catch (e) {
+            log(
+              "WS message not JSON: " + String(event.data).slice(0, 120),
+              "warn",
+            );
             return;
           }
+          log("WS msg ← " + JSON.stringify(msg).slice(0, 200));
           handleTrackerMessage(msg);
         };
 
-        ws.onclose = () => {
+        ws.onclose = (ev) => {
           setStatus("Reconnecting…", "down");
+          log(
+            `WS CLOSED ${url} code=${ev.code} reason="${ev.reason}" wasClean=${ev.wasClean}`,
+            "err",
+          );
           if (announceTimer) clearInterval(announceTimer);
           wsUrlIndex++;
           setTimeout(connectTracker, reconnectDelay);
           reconnectDelay = Math.min(reconnectDelay * 1.7, 20000);
         };
 
-        ws.onerror = () => {
+        ws.onerror = (e) => {
+          log("WS ERROR " + url, "err");
           try {
             ws.close();
           } catch (e) {}
@@ -741,7 +890,7 @@
             });
             pc.pendingOfferId = offerId;
           } catch (e) {
-            /* skip this slot */
+            log("createOffer failed: " + e, "err");
           }
         }
 
@@ -757,16 +906,23 @@
         if (event) packet.event = event;
         if (offers.length) packet.offers = offers;
 
+        log(
+          `Announce → numwant=${offers.length} event=${event || "-"} peer_id=${hex(myPeerId).slice(0, 8)}…`,
+        );
         ws.send(JSON.stringify(packet));
       }
 
       function handleTrackerMessage(msg) {
-        if (msg.action !== "announce" && msg.action !== "answer") return;
+        if (msg.action !== "announce" && msg.action !== "answer") {
+          log("Ignoring tracker msg with action=" + msg.action, "warn");
+          return;
+        }
 
         // Incoming OFFER relayed from another peer in the swarm
         if (msg.offer && msg.offer_id && msg.peer_id) {
           const fromHex = hex(binaryStringToBytes(msg.peer_id));
           if (fromHex === hex(myPeerId)) return; // ignore echoes of our own
+          log("Offer received from peer " + fromHex.slice(0, 8) + "…", "ok");
           receiveOffer(fromHex, msg.offer_id, msg.offer);
           return;
         }
@@ -775,12 +931,30 @@
         if (msg.answer && msg.offer_id) {
           const entry = findPeerByOfferId(msg.offer_id);
           if (entry) {
+            log("Answer received for offer_id " + msg.offer_id, "ok");
             entry.pc
               .setRemoteDescription(new RTCSessionDescription(msg.answer))
-              .catch(() => {});
+              .catch((err) =>
+                log("setRemoteDescription(answer) failed: " + err, "err"),
+              );
+          } else {
+            log(
+              "Answer received but no matching pending offer_id " +
+                msg.offer_id,
+              "warn",
+            );
           }
           return;
         }
+
+        log(
+          "Announce ack (no offer/answer payload): interval=" +
+            msg.interval +
+            " complete=" +
+            msg.complete +
+            " incomplete=" +
+            msg.incomplete,
+        );
       }
 
       function binaryStringToBytes(str) {
@@ -815,6 +989,18 @@
 
         pc.onconnectionstatechange = () => {
           entry.connectionState = pc.connectionState;
+          log(
+            "PeerConnection state → " +
+              pc.connectionState +
+              (remotePeerIdHex
+                ? " (peer " + remotePeerIdHex.slice(0, 8) + "…)"
+                : ""),
+            pc.connectionState === "connected"
+              ? "ok"
+              : pc.connectionState === "failed"
+                ? "err"
+                : undefined,
+          );
           if (
             pc.connectionState === "failed" ||
             pc.connectionState === "disconnected"
@@ -827,6 +1013,9 @@
           ) {
             cleanupPeer(remotePeerIdHex);
           }
+        };
+        pc.oniceconnectionstatechange = () => {
+          log("ICE state → " + pc.iceConnectionState);
         };
 
         if (isInitiator) {
@@ -898,8 +1087,8 @@
         dc.bufferedAmountLowThreshold = BUFFERED_AMOUNT_LOW;
 
         dc.onopen = () => {
-          // resolve final peer key once we may have created this under a "pending-" key
           finalizePeerKey(entry);
+          log('DataChannel OPEN, sending hello as "' + myUsername + '"', "ok");
           dc.send(JSON.stringify({ t: "hello", u: myUsername }));
         };
 
@@ -912,6 +1101,7 @@
         };
 
         dc.onclose = () => {
+          log("DataChannel closed", "warn");
           for (const [key, val] of peers.entries()) {
             if (val === entry) cleanupPeer(key);
           }
@@ -927,6 +1117,7 @@
         if (msg.t === "hello") {
           entry.username = msg.u;
           usernameToPeerId.set(msg.u, entry);
+          log('Hello received from "' + msg.u + '" — peer resolved', "ok");
           renderContacts();
           if (!chatLogs.has(msg.u)) chatLogs.set(msg.u, []);
           return;
