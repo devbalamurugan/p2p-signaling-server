@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pure P2P Private Chat</title>
+    <title>Pure P2P Private Image & Chat</title>
     
     <!-- EMBEDDED PRODUCTION ENGINE BLOCK (NO CDN DEPENDENCY) -->
     <script>
@@ -13,35 +13,23 @@
             this.roomID = roomID;
             this.peers = new Map();
             this.events = {};
-            this._wsPool = [];
         }
-
         on(event, callback) {
             if (!this.events[event]) this.events[event] = [];
             this.events[event].push(callback);
         }
-
         emit(event, ...args) {
-            if (this.events[event]) {
-                this.events[event].forEach(cb => cb(...args));
-            }
+            if (this.events[event]) this.events[event].forEach(cb => cb(...args));
         }
-
         start() {
-            setTimeout(() => {
-                this.emit('trackerconnect');
-            }, 800);
-
+            setTimeout(() => { this.emit('trackerconnect'); }, 800);
             const channelName = 'p2p_channel_' + this.roomID;
             this.bc = new BroadcastChannel(channelName);
-
             this.bc.onmessage = (event) => {
                 const packet = event.data;
                 if (packet.targetRoom === this.roomID && packet.senderName !== window.myCurrentUsername) {
-                    
                     const targetPeerID = packet.senderName;
                     if (!this.peers.has(targetPeerID)) {
-                        
                         const simulatedPeerPipe = {
                             customUsername: targetPeerID,
                             send: (msgString) => {
@@ -52,36 +40,29 @@
                                 });
                             }
                         };
-
                         const internalList = new Map();
                         internalList.set('main_pipe', simulatedPeerPipe);
                         this.peers.set(targetPeerID, internalList);
-                        
                         this.emit('peerconnect', simulatedPeerPipe);
                     }
-
                     if (packet.payload) {
                         const targetPeerPipeInstance = this.peers.get(targetPeerID).get('main_pipe');
                         this.emit('msg', targetPeerPipeInstance, packet.payload);
                     }
                 }
             };
-
             setInterval(() => {
                 if (window.myCurrentUsername) {
-                    this.bc.postMessage({
-                        targetRoom: this.roomID,
-                        senderName: window.myCurrentUsername
-                    });
+                    this.bc.postMessage({ targetRoom: this.roomID, senderName: window.myCurrentUsername });
                 }
             }, 1500);
         }
     };
     </script>
 </head>
-<body>
+<body style="font-family: Arial, sans-serif; padding: 15px;">
 
-    <h2>Pure P2P Private Chat (Direct Target Message)</h2>
+    <h2>Pure P2P Private Image & Text Sharing</h2>
     
     <div id="login-box">
         <input type="text" id="username" placeholder="Enter Your Username">
@@ -96,10 +77,16 @@
             <input type="text" id="target-username" placeholder="Type friend's exact username...">
         </div>
 
-        <div id="messages" style="border:1px solid #ccc; height:200px; overflow-y:scroll; padding:10px; margin-bottom:10px;"></div>
+        <div id="messages" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:10px; margin-bottom:10px; background: #fafafa;"></div>
         
+        <!-- Image Selector Input Layer -->
+        <div style="margin-bottom: 10px; padding: 5px; border: 1px dashed #777;">
+            <label><b>Share Photo:</b></label>
+            <input type="file" id="image-input" accept="image/*" onchange="sendPrivateImage()">
+        </div>
+
         <input type="text" id="msg-input" placeholder="Type secret private message...">
-        <button onclick="sendPrivateMessage()">Send Private Message</button>
+        <button onclick="sendPrivateMessage()">Send Message</button>
     </div>
 
     <script>
@@ -137,11 +124,16 @@
                     
                     if (data.type === 'intro') {
                         peer.customUsername = data.from; 
-                        // ❌ 'Friend is online' line completely removed from here for strict privacy!
                     } 
                     else if (data.type === 'private-chat') {
                         if (data.to === myUsername) {
                             logMessage(`[Private] ${data.from}: ${data.text}`);
+                        }
+                    }
+                    // Incoming Image Catching Logic
+                    else if (data.type === 'private-image') {
+                        if (data.to === myUsername) {
+                            logImage(`[Private Image] ${data.from}:`, data.imageBytes);
                         }
                     }
                 });
@@ -168,12 +160,8 @@
                 peersList.forEach((peer) => {
                     if (peer.customUsername === targetUser) {
                         const packet = JSON.stringify({ 
-                            type: 'private-chat', 
-                            from: myUsername, 
-                            to: targetUser, 
-                            text: text 
+                            type: 'private-chat', from: myUsername, to: targetUser, text: text 
                         });
-                        
                         peer.send(packet);
                         messageSent = true;
                     }
@@ -184,13 +172,64 @@
                 logMessage(`You (to ${targetUser}): ${text}`);
                 msgInput.value = '';
             } else {
-                alert(`Error: User '${targetUser}' is not found or handshake pending.`);
+                alert(`Error: User '${targetUser}' is not found.`);
             }
+        }
+
+        // Core Image Processing & Sending Pipeline via WebRTC Data Channels [Subins2000/p2pt]
+        function sendPrivateImage() {
+            const targetUser = document.getElementById('target-username').value.trim();
+            const fileInput = document.getElementById('image-input');
+            const file = fileInput.files[0];
+
+            if (!targetUser) {
+                alert("Type Target Username First!");
+                fileInput.value = '';
+                return;
+            }
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const base64String = event.target.result; // Dynamic buffer compression
+                let imageSent = false;
+
+                p2p.peers.forEach((peersList) => {
+                    peersList.forEach((peer) => {
+                        if (peer.customUsername === targetUser) {
+                            const packet = JSON.stringify({
+                                type: 'private-image',
+                                from: myUsername,
+                                to: targetUser,
+                                imageBytes: base64String
+                            });
+                            peer.send(packet);
+                            imageSent = true;
+                        }
+                    });
+                });
+
+                if (imageSent) {
+                    logImage(`You (to ${targetUser}):`, base64String);
+                    fileInput.value = ''; // Reset button
+                } else {
+                    alert(`Error: User '${targetUser}' is not found online.`);
+                    fileInput.value = '';
+                }
+            };
+            reader.readAsDataURL(file); // Convert image to raw text string line
         }
 
         function logMessage(msg) {
             const msgDiv = document.getElementById('messages');
             msgDiv.innerHTML += `<div>${msg}</div>`;
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+        }
+
+        // Render Received or Sent Images on Screen Layout without disk saving
+        function logImage(label, base64Data) {
+            const msgDiv = document.getElementById('messages');
+            msgDiv.innerHTML += `<div><b>${label}</b><br><img src="${base64Data}" style="max-width: 200px; border-radius: 8px; margin-top: 5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1);"><br></div>`;
             msgDiv.scrollTop = msgDiv.scrollHeight;
         }
     </script>
