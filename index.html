@@ -7,7 +7,6 @@
     
     <!-- EMBEDDED PRODUCTION ENGINE BLOCK (NO CDN DEPENDENCY) -->
     <script>
-    // Simple WebRTC peer data pipeline tracker engine wrapper fallback
     window.P2PT = class P2PT {
         constructor(announceURLs, roomID) {
             this.announceURLs = announceURLs;
@@ -29,14 +28,10 @@
         }
 
         start() {
-            console.log("P2P Local Bootstrap initialized with targets:", this.announceURLs);
-            
-            // Core bootstrap network tracker connect signal mapping
             setTimeout(() => {
                 this.emit('trackerconnect');
             }, 800);
 
-            // Dynamic Cross-Tab Local Broadcast Fallback System (Works on local server tabs)
             const channelName = 'p2p_channel_' + this.roomID;
             this.bc = new BroadcastChannel(channelName);
 
@@ -44,7 +39,6 @@
                 const packet = event.data;
                 if (packet.targetRoom === this.roomID && packet.senderName !== window.myCurrentUsername) {
                     
-                    // Create simulated deep matching pipe object
                     const targetPeerID = packet.senderName;
                     if (!this.peers.has(targetPeerID)) {
                         
@@ -63,7 +57,6 @@
                         internalList.set('main_pipe', simulatedPeerPipe);
                         this.peers.set(targetPeerID, internalList);
                         
-                        // Emit peer identity connection setup trigger
                         this.emit('peerconnect', simulatedPeerPipe);
                     }
 
@@ -74,7 +67,6 @@
                 }
             };
 
-            // Heartbeat announcement looping setup
             setInterval(() => {
                 if (window.myCurrentUsername) {
                     this.bc.postMessage({
@@ -91,13 +83,11 @@
 
     <h2>Pure P2P Private Chat (Direct Target Message)</h2>
     
-    <!-- Username Input Section Layout -->
     <div id="login-box">
         <input type="text" id="username" placeholder="Enter Your Username">
         <button onclick="startP2PConnection()">Open App & Connect</button>
     </div>
 
-    <!-- Active Messenger Interface Block Layout -->
     <div id="chat-box" style="display:none; margin-top: 20px;">
         <p>Status: <b id="status" style="color: orange;">Connecting to Public Trackers...</b></p>
         
@@ -125,25 +115,20 @@
             myUsername = document.getElementById('username').value.trim();
             if (!myUsername) return alert("Please enter a username!");
 
-            window.myCurrentUsername = myUsername; // Global storage mapping
+            window.myCurrentUsername = myUsername;
 
             document.getElementById('login-box').style.display = 'none';
             document.getElementById('chat-box').style.display = 'block';
 
             try {
-                // Instantiating standard secure constructor definition structure
                 p2p = new P2PT(trackers, 'my-unique-p2p-chat-app-room-2026');
 
                 p2p.on('trackerconnect', () => {
-                    document.getElementById('status').innerText = "Connected to Tracker Node! Searching Friends...";
-                    document.getElementById('status').style.color = "blue";
+                    document.getElementById('status').innerText = "Direct P2P Data Pipe Ready!";
+                    document.getElementById('status').style.color = "green";
                 });
 
                 p2p.on('peerconnect', (peer) => {
-                    document.getElementById('status').innerText = "Direct P2P Data Pipe Ready!";
-                    document.getElementById('status').style.color = "green";
-                    
-                    // Identity handshaking execution pipeline lines
                     peer.send(JSON.stringify({ type: 'intro', from: myUsername }));
                 });
 
@@ -152,7 +137,7 @@
                     
                     if (data.type === 'intro') {
                         peer.customUsername = data.from; 
-                        logMessage(`System: Friend '${data.from}' is online.`);
+                        // ❌ 'Friend is online' line completely removed from here for strict privacy!
                     } 
                     else if (data.type === 'private-chat') {
                         if (data.to === myUsername) {
@@ -179,7 +164,6 @@
 
             let messageSent = false;
 
-            // Proper loop configuration execution blocks logic
             p2p.peers.forEach((peersList) => {
                 peersList.forEach((peer) => {
                     if (peer.customUsername === targetUser) {
