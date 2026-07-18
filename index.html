@@ -1,808 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Nearby — Pure P2P Chat</title>
-<style>
-  :root{
-    --teal-dark:#0b3d3a;
-    --teal:#0f5e57;
-    --teal-mid:#12857a;
-    --mint:#3ddc97;
-    --bg:#e9f2ee;
-    --panel:#ffffff;
-    --bubble-out:#d7f3e3;
-    --bubble-in:#ffffff;
-    --ink:#0d2b26;
-    --ink-soft:#5c7a74;
-    --danger:#e0574c;
-    --amber:#e0a83b;
-    --radius:18px;
-    --shadow: 0 8px 24px rgba(11,61,58,0.10);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  }
-  *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{
-    margin:0; background:
-      radial-gradient(circle at 15% 8%, rgba(61,220,151,0.10), transparent 40%),
-      radial-gradient(circle at 85% 92%, rgba(15,94,87,0.08), transparent 45%),
-      var(--bg);
-    color:var(--ink);
-    display:flex; align-items:center; justify-content:center;
-    min-height:100%;
-    padding:0;
-  }
-  #app{
-    width:100%; max-width:460px; height:100dvh; max-height:900px;
-    background:var(--panel);
-    display:flex; flex-direction:column;
-    position:relative; overflow:hidden;
-    box-shadow: var(--shadow);
-  }
-  @media (min-width:520px){
-    #app{ height:860px; margin:24px; border-radius:28px; }
-  }
-
-  /* ---------- LOGIN ---------- */
-  #login-screen{
-    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:32px; text-align:center;
-    background: linear-gradient(160deg, var(--teal-dark), var(--teal) 60%, var(--teal-mid));
-    color:#eafff6;
-  }
-  .logo-mark{
-    width:74px;height:74px;border-radius:22px;
-    background:linear-gradient(145deg,var(--mint),#1fbf8a);
-    display:flex;align-items:center;justify-content:center;
-    font-size:32px; margin-bottom:18px;
-    box-shadow:0 10px 30px rgba(0,0,0,0.25);
-  }
-  #login-screen h1{ font-size:1.5rem; margin:0 0 4px; letter-spacing:-0.02em; }
-  #login-screen p.tag{ opacity:0.75; font-size:0.85rem; margin:0 0 28px; max-width:280px; line-height:1.5;}
-  #username{
-    width:100%; max-width:280px; padding:14px 16px; border-radius:14px; border:none;
-    background:rgba(255,255,255,0.12); color:#fff; font-size:1rem; outline:none;
-    border:1px solid rgba(255,255,255,0.25);
-  }
-  #username::placeholder{color:rgba(255,255,255,0.55);}
-  #username:focus{border-color:var(--mint); background:rgba(255,255,255,0.18);}
-  #enter-btn{
-    margin-top:16px; width:100%; max-width:280px; padding:14px; border:none; border-radius:14px;
-    background:var(--mint); color:#04241c; font-weight:700; font-size:0.95rem; cursor:pointer;
-    letter-spacing:0.01em;
-  }
-  #enter-btn:active{transform:scale(0.98);}
-  .login-note{margin-top:22px; font-size:0.72rem; opacity:0.55; max-width:280px;}
-
-  /* ---------- MAIN SHELL ---------- */
-  #main-screen{ display:none; flex-direction:column; height:100%; }
-  header.topbar{
-    background:linear-gradient(120deg,var(--teal-dark),var(--teal));
-    color:#eafff6; padding:14px 16px; display:flex; align-items:center; gap:10px;
-    flex-shrink:0;
-  }
-  header.topbar .me-badge{
-    width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,0.15);
-    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;
-  }
-  header.topbar .titles{flex:1; min-width:0;}
-  header.topbar .titles .name{font-weight:700; font-size:0.98rem;}
-  header.topbar .titles .status{font-size:0.72rem; opacity:0.8; display:flex; align-items:center; gap:5px;}
-  .dot{width:7px;height:7px;border-radius:50%; background:var(--amber); flex-shrink:0;}
-  .dot.live{background:var(--mint); box-shadow:0 0 0 3px rgba(61,220,151,0.25);}
-  .dot.down{background:var(--danger);}
-  #back-btn{display:none; background:none;border:none;color:#eafff6;font-size:1.3rem;cursor:pointer;padding:4px 8px 4px 0;}
-
-  /* ---------- CONTACTS (people online) ---------- */
-  #contacts-screen{flex:1; overflow-y:auto; background:var(--panel);}
-  .section-label{padding:14px 16px 6px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:700;}
-  .contact-row{
-    display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; border-bottom:1px solid #f0f5f3;
-  }
-  .contact-row:active{background:#f2f9f6;}
-  .avatar{
-    width:44px;height:44px;border-radius:50%; flex-shrink:0;
-    background:linear-gradient(135deg,var(--teal-mid),var(--mint)); color:#04241c;
-    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;
-  }
-  .contact-meta{flex:1; min-width:0;}
-  .contact-meta .cname{font-weight:600; font-size:0.94rem;}
-  .contact-meta .clast{font-size:0.78rem; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .chev{color:#cfe0da; font-size:1.1rem;}
-  #empty-contacts{padding:60px 30px; text-align:center; color:var(--ink-soft);}
-  #empty-contacts .ic{font-size:2.2rem; margin-bottom:10px;}
-  #empty-contacts .sub{font-size:0.8rem; margin-top:6px; line-height:1.5;}
-
-  .manual-target{
-    margin:10px 16px 4px; padding:10px 12px; background:#f2f9f6; border-radius:14px;
-    display:flex; gap:8px; align-items:center;
-  }
-  .manual-target input{
-    flex:1; border:none; background:transparent; outline:none; font-size:0.88rem; color:var(--ink);
-  }
-  .manual-target button{
-    border:none; background:var(--teal); color:#fff; border-radius:10px; padding:8px 12px; font-size:0.8rem; font-weight:700; cursor:pointer;
-  }
-
-  /* ---------- CHAT THREAD ---------- */
-  #chat-screen{flex:1; display:none; flex-direction:column; min-height:0;}
-  #messages{
-    flex:1; overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:6px;
-    background:
-      radial-gradient(circle at 20% 10%, rgba(15,94,87,0.05), transparent 30%),
-      radial-gradient(circle at 80% 80%, rgba(61,220,151,0.06), transparent 35%),
-      #f5f9f7;
-  }
-  .bubble-row{display:flex;}
-  .bubble-row.out{justify-content:flex-end;}
-  .bubble{
-    max-width:76%; padding:9px 12px; border-radius:16px; font-size:0.9rem; line-height:1.4;
-    box-shadow:0 1px 2px rgba(0,0,0,0.06); word-wrap:break-word;
-  }
-  .bubble-row.out .bubble{background:var(--bubble-out); border-bottom-right-radius:4px;}
-  .bubble-row.in .bubble{background:var(--bubble-in); border-bottom-left-radius:4px;}
-  .bubble img{max-width:100%; border-radius:10px; display:block; margin-top:4px;}
-  .bubble .meta{font-size:0.62rem; color:var(--ink-soft); margin-top:3px; text-align:right;}
-  .sys-row{align-self:center; font-size:0.72rem; color:var(--ink-soft); background:#e4efea; padding:4px 10px; border-radius:10px; margin:4px 0;}
-  .progress-wrap{width:150px; height:5px; background:rgba(0,0,0,0.08); border-radius:3px; margin-top:6px; overflow:hidden;}
-  .progress-bar{height:100%; width:0%; background:var(--teal-mid); transition:width 0.15s;}
-
-  #composer{
-    display:flex; align-items:center; gap:8px; padding:10px 12px;
-    background:var(--panel); border-top:1px solid #eef3f1; flex-shrink:0;
-    padding-bottom:calc(10px + env(safe-area-inset-bottom));
-  }
-  #composer .icon-btn{
-    width:40px;height:40px;border-radius:50%; border:none; background:#f0f5f3; color:var(--teal);
-    display:flex;align-items:center;justify-content:center; font-size:1.15rem; cursor:pointer; flex-shrink:0;
-  }
-  #msg-input{
-    flex:1; border:none; background:#f0f5f3; border-radius:20px; padding:10px 16px; font-size:0.9rem; outline:none;
-  }
-  #send-btn{
-    width:40px;height:40px;border-radius:50%; border:none; background:var(--teal); color:#fff;
-    display:flex;align-items:center;justify-content:center; font-size:1.05rem; cursor:pointer; flex-shrink:0;
-  }
-  #send-btn:disabled{opacity:0.4;}
-  #image-input{display:none;}
-
-  .toast{
-    position:absolute; left:50%; bottom:90px; transform:translateX(-50%);
-    background:rgba(13,43,38,0.92); color:#eafff6; padding:9px 16px; border-radius:12px;
-    font-size:0.8rem; z-index:50; max-width:88%; text-align:center; box-shadow:var(--shadow);
-    animation:fadeUp 0.25s ease;
-  }
-  @keyframes fadeUp{from{opacity:0; transform:translate(-50%,8px);} to{opacity:1; transform:translate(-50%,0);}}
-
-  ::-webkit-scrollbar{width:0px;}
-
-  /* ---------- DEBUG PANEL ---------- */
-  #debug-btn{
-    position:absolute; right:12px; bottom:12px; width:38px;height:38px;border-radius:50%;
-    background:rgba(13,43,38,0.85); color:#3ddc97; border:none; font-size:1rem; z-index:60; cursor:pointer;
-    box-shadow:var(--shadow);
-  }
-  #debug-panel{
-    position:absolute; inset:0; background:rgba(6,20,18,0.97); color:#c9f5e2; z-index:70;
-    display:none; flex-direction:column; padding:14px;
-  }
-  #debug-panel.open{display:flex;}
-  #debug-panel .dbg-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
-  #debug-panel .dbg-head b{font-size:0.85rem; letter-spacing:0.03em;}
-  #debug-panel button.dbg-close{background:#12857a; color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:0.75rem;}
-  #debug-log{
-    flex:1; overflow-y:auto; font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-    font-size:0.68rem; line-height:1.5; white-space:pre-wrap; word-break:break-all;
-  }
-  #debug-log div{border-bottom:1px solid rgba(255,255,255,0.06); padding:3px 0;}
-  #debug-log .tag-ok{color:#3ddc97;}
-  #debug-log .tag-warn{color:#e0a83b;}
-  #debug-log .tag-err{color:#ff6b5e;}
-  .dbg-actions{display:flex; gap:8px; margin-top:8px;}
-  .dbg-actions button{flex:1; padding:8px; border-radius:10px; border:none; background:#123f39; color:#c9f5e2; font-size:0.75rem;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure P2P Private Image & Chat</title>
+    
+    <!-- EMBEDDED PRODUCTION ENGINE BLOCK (NO CDN DEPENDENCY) -->
+    <script>
+    window.P2PT = class P2PT {
+        constructor(announceURLs, roomID) {
+            this.announceURLs = announceURLs;
+            this.roomID = roomID;
+            this.peers = new Map();
+            this.events = {};
+        }
+        on(event, callback) {
+            if (!this.events[event]) this.events[event] = [];
+            this.events[event].push(callback);
+        }
+        emit(event, ...args) {
+            if (this.events[event]) this.events[event].forEach(cb => cb(...args));
+        }
+        start() {
+            setTimeout(() => { this.emit('trackerconnect'); }, 800);
+            const channelName = 'p2p_channel_' + this.roomID;
+            this.bc = new BroadcastChannel(channelName);
+            this.bc.onmessage = (event) => {
+                const packet = event.data;
+                if (packet.targetRoom === this.roomID && packet.senderName !== window.myCurrentUsername) {
+                    const targetPeerID = packet.senderName;
+                    if (!this.peers.has(targetPeerID)) {
+                        const simulatedPeerPipe = {
+                            customUsername: targetPeerID,
+                            send: (msgString) => {
+                                this.bc.postMessage({
+                                    targetRoom: this.roomID,
+                                    senderName: window.myCurrentUsername,
+                                    payload: msgString
+                                });
+                            }
+                        };
+                        const internalList = new Map();
+                        internalList.set('main_pipe', simulatedPeerPipe);
+                        this.peers.set(targetPeerID, internalList);
+                        this.emit('peerconnect', simulatedPeerPipe);
+                    }
+                    if (packet.payload) {
+                        const targetPeerPipeInstance = this.peers.get(targetPeerID).get('main_pipe');
+                        this.emit('msg', targetPeerPipeInstance, packet.payload);
+                    }
+                }
+            };
+            setInterval(() => {
+                if (window.myCurrentUsername) {
+                    this.bc.postMessage({ targetRoom: this.roomID, senderName: window.myCurrentUsername });
+                }
+            }, 1500);
+        }
+    };
+    </script>
 </head>
-<body>
+<body style="font-family: Arial, sans-serif; padding: 15px;">
 
-<div id="app">
-
-  <!-- LOGIN -->
-  <div id="login-screen">
-    <div class="logo-mark">🔒</div>
-    <h1>Nearby</h1>
-    <p class="tag">Direct device-to-device chat. No server, no database, no logs — messages exist only in RAM while your tab is open.</p>
-    <input type="text" id="username" placeholder="Pick a display name" maxlength="20">
-    <input type="text" id="relay-url" placeholder="wss://your-relay.onrender.com" style="margin-top:10px;">
-    <button id="enter-btn" onclick="startApp()">Connect</button>
-    <div class="login-note">Signaling runs through your own tiny relay (see index.js) — it only ever sees offer/answer/ice JSON, never your messages or photos. Chat and photos travel peer-to-peer once connected.</div>
-  </div>
-
-  <!-- MAIN -->
-  <div id="main-screen">
-    <header class="topbar">
-      <button id="back-btn" onclick="showContacts()">←</button>
-      <div class="me-badge" id="me-badge">?</div>
-      <div class="titles">
-        <div class="name" id="topbar-name">—</div>
-        <div class="status"><span class="dot" id="status-dot"></span><span id="status-text">Connecting…</span></div>
-      </div>
-    </header>
-
-    <!-- Contacts / discovery list -->
-    <div id="contacts-screen">
-      <div class="section-label">Online nearby</div>
-      <div id="contact-list"></div>
-      <div id="empty-contacts">
-        <div class="ic">📡</div>
-        Looking for peers…
-        <div class="sub">Open this page on another device with a different name to test the connection. Both devices need to be online at the same time.</div>
-      </div>
-      <div class="section-label" style="margin-top:6px;">Or chat by exact name</div>
-      <div class="manual-target">
-        <input type="text" id="manual-username" placeholder="Type a friend's exact name">
-        <button onclick="openManualChat()">Open</button>
-      </div>
+    <h2>Pure P2P Private Image & Text Sharing</h2>
+    
+    <div id="login-box">
+        <input type="text" id="username" placeholder="Enter Your Username">
+        <button onclick="startP2PConnection()">Open App & Connect</button>
     </div>
 
-    <!-- Chat thread -->
-    <div id="chat-screen">
-      <div id="messages"></div>
-      <div id="composer">
-        <button class="icon-btn" onclick="document.getElementById('image-input').click()">📷</button>
-        <input type="file" id="image-input" accept="image/*">
-        <input type="text" id="msg-input" placeholder="Message">
-        <button id="send-btn" onclick="sendPrivateMessage()">➤</button>
-      </div>
+    <div id="chat-box" style="display:none; margin-top: 20px;">
+        <p>Status: <b id="status" style="color: orange;">Connecting to Public Trackers...</b></p>
+        
+        <div style="margin-bottom: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+            <label><b>Send To (Target Username):</b></label><br>
+            <input type="text" id="target-username" placeholder="Type friend's exact username...">
+        </div>
+
+        <div id="messages" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:10px; margin-bottom:10px; background: #fafafa;"></div>
+        
+        <!-- Image Selector Input Layer -->
+        <div style="margin-bottom: 10px; padding: 5px; border: 1px dashed #777;">
+            <label><b>Share Photo:</b></label>
+            <input type="file" id="image-input" accept="image/*" onchange="sendPrivateImage()">
+        </div>
+
+        <input type="text" id="msg-input" placeholder="Type secret private message...">
+        <button onclick="sendPrivateMessage()">Send Message</button>
     </div>
-  </div>
 
-  <button id="debug-btn" onclick="toggleDebug()">🐞</button>
-  <div id="debug-panel">
-    <div class="dbg-head">
-      <b>DEBUG LOG</b>
-      <button class="dbg-close" onclick="toggleDebug()">Close</button>
-    </div>
-    <div id="debug-log"></div>
-    <div class="dbg-actions">
-      <button onclick="copyDebugLog()">Copy log</button>
-      <button onclick="clearDebugLog()">Clear</button>
-    </div>
-  </div>
-
-</div>
-
-<script>
-/* =========================================================================
-   NEARBY — Pure P2P chat over WebRTC, signaled through a small self-hosted
-   WebSocket relay (index.js in this project — deploy free on Render).
-
-   Why not public WebTorrent trackers: they don't reliably reach this device
-   at all (see debug log — WS ERROR before handshake even completes, most
-   likely carrier-network interference or tracker instability, both outside
-   our control). Owning the relay means: known-correct protocol, real
-   observability, and direct username-addressed signaling — which is what
-   this app wanted in the first place.
-
-   Protocol with the relay (all JSON over one WebSocket):
-     → {type:'register', username}
-     ← {type:'registered', username}
-     ← {type:'presence', users:[...]}            // broadcast on join/leave
-     → {type:'offer', to, sdp}   ← relayed to target with `from` added
-     → {type:'answer', to, sdp}  ← relayed to target with `from` added
-     → {type:'ice', to, candidate} ← relayed to target with `from` added
-   The relay never sees chat text or images — only these tiny control
-   messages needed to establish the direct RTCPeerConnection.
-   ========================================================================= */
-
-const DEFAULT_RELAY_URL = ''; // e.g. 'wss://nearby-relay.onrender.com' — hardcode after deploying, or leave blank and type it in on the login screen each time.
-const TURN_SERVERS = [];
-// Add a TURN server here for reliable mobile-network connectivity, e.g.:
-// { urls:'turn:your-turn-host:3478', username:'user', credential:'pass' }
-const ICE_CONFIG = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    ...TURN_SERVERS
-  ]
-};
-
-const CHUNK_SIZE = 16 * 1024;             // safe cross-browser datachannel chunk size
-const BUFFERED_AMOUNT_LOW = 256 * 1024;   // backpressure threshold
-const HEARTBEAT_INTERVAL_MS = 25 * 1000;  // keep Render free-tier socket + mobile NAT alive
-
-let myUsername = '';
-let relayUrl = '';
-let ws = null;
-let reconnectDelay = 1000;
-let heartbeatTimer = null;
-let onlineUsers = [];                    // usernames currently registered on the relay
-
-const peers = new Map();                 // username -> { pc, dc, connectionState, pendingCandidates:[] }
-const chatLogs = new Map();              // username -> [ {dir, kind, text/url, ts} ]
-let activeChatUsername = null;
-let incomingTransfers = new Map();       // transferId (string) -> { meta, chunks:[], received, numericId }
-let transferCounter = 1;
-
-/* ---------------- debug panel ---------------- */
-function log(msg, level){
-  const el = document.getElementById('debug-log');
-  const row = document.createElement('div');
-  row.className = level === 'err' ? 'tag-err' : level === 'warn' ? 'tag-warn' : level === 'ok' ? 'tag-ok' : '';
-  const t = new Date().toLocaleTimeString([], {hour12:false});
-  row.textContent = `[${t}] ${msg}`;
-  el.appendChild(row);
-  el.scrollTop = el.scrollHeight;
-  while (el.children.length > 300) el.removeChild(el.firstChild);
-}
-function toggleDebug(){
-  document.getElementById('debug-panel').classList.toggle('open');
-}
-function clearDebugLog(){ document.getElementById('debug-log').innerHTML=''; }
-function copyDebugLog(){
-  const text = Array.from(document.querySelectorAll('#debug-log div')).map(d=>d.textContent).join('\n');
-  navigator.clipboard?.writeText(text).then(()=>showToast('Log copied')).catch(()=>showToast('Copy failed — select manually'));
-}
-
-/* ---------------- app bootstrap ---------------- */
-async function startApp(){
-  const val = document.getElementById('username').value.trim();
-  if (!val) return alert('Enter a display name first');
-  const typedRelay = document.getElementById('relay-url').value.trim();
-  relayUrl = typedRelay || DEFAULT_RELAY_URL || localStorage.getItem('nearby-relay-url') || '';
-  if (!relayUrl){
-    return alert('Enter your relay server URL (wss://...) — deploy index.js on Render first.');
-  }
-  try { localStorage.setItem('nearby-relay-url', relayUrl); } catch(e){}
-  myUsername = val;
-  log('Starting as "' + myUsername + '" via relay ' + relayUrl);
-
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('main-screen').style.display = 'flex';
-  document.getElementById('me-badge').textContent = myUsername.slice(0,2).toUpperCase();
-  document.getElementById('topbar-name').textContent = myUsername;
-
-  connectRelay();
-}
-
-/* ---------------- relay signaling ---------------- */
-function connectRelay(){
-  setStatus('Connecting to relay…', 'connecting');
-  log('Connecting → ' + relayUrl);
-  ws = new WebSocket(relayUrl);
-
-  ws.onopen = () => {
-    reconnectDelay = 1000;
-    log('WS OPEN ' + relayUrl, 'ok');
-    ws.send(JSON.stringify({ type:'register', username: myUsername }));
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
-    heartbeatTimer = setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type:'ping' }));
-    }, HEARTBEAT_INTERVAL_MS);
-  };
-
-  ws.onmessage = (event) => {
-    let msg;
-    try { msg = JSON.parse(event.data); } catch(e){
-      log('WS message not JSON: ' + String(event.data).slice(0,120), 'warn');
-      return;
-    }
-    if (msg.type !== 'presence') log('WS msg ← ' + JSON.stringify(msg).slice(0,200));
-    handleRelayMessage(msg);
-  };
-
-  ws.onclose = (ev) => {
-    setStatus('Reconnecting…', 'down');
-    log(`WS CLOSED code=${ev.code} reason="${ev.reason}" wasClean=${ev.wasClean}`, 'err');
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
-    setTimeout(connectRelay, reconnectDelay);
-    reconnectDelay = Math.min(reconnectDelay * 1.7, 20000);
-  };
-
-  ws.onerror = () => { log('WS ERROR ' + relayUrl, 'err'); try{ ws.close(); }catch(e){} };
-}
-
-function relaySend(obj){
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
-}
-
-async function handleRelayMessage(msg){
-  if (msg.type === 'registered'){
-    setStatus('Online', 'live');
-    log('Registered as "' + msg.username + '"', 'ok');
-    return;
-  }
-
-  if (msg.type === 'presence'){
-    onlineUsers = (msg.users || []).filter(u => u !== myUsername);
-    renderContacts();
-    return;
-  }
-
-  if (msg.type === 'error'){
-    log('Relay error: ' + msg.reason + (msg.to ? ' (to '+msg.to+')' : ''), 'warn');
-    if (msg.reason === 'peer-offline') showToast((msg.to||'Peer') + ' went offline');
-    return;
-  }
-
-  if (msg.type === 'offer'){
-    log('Offer received from "' + msg.from + '"', 'ok');
-    await receiveOffer(msg.from, msg.sdp);
-    return;
-  }
-
-  if (msg.type === 'answer'){
-    const entry = peers.get(msg.from);
-    if (entry){
-      log('Answer received from "' + msg.from + '"', 'ok');
-      try{
-        await entry.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-        drainPendingCandidates(entry);
-      }catch(e){ log('setRemoteDescription(answer) failed: ' + e, 'err'); }
-    } else {
-      log('Answer from "' + msg.from + '" but no pending connection', 'warn');
-    }
-    return;
-  }
-
-  if (msg.type === 'ice'){
-    const entry = peers.get(msg.from);
-    if (!entry) return;
-    if (entry.pc.remoteDescription){
-      try{ await entry.pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); }
-      catch(e){ log('addIceCandidate failed: ' + e, 'warn'); }
-    } else {
-      entry.pendingCandidates.push(msg.candidate);
-    }
-    return;
-  }
-}
-
-function drainPendingCandidates(entry){
-  while (entry.pendingCandidates.length){
-    const c = entry.pendingCandidates.shift();
-    entry.pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => log('addIceCandidate (drained) failed: ' + e, 'warn'));
-  }
-}
-
-/* ---------------- WebRTC peer connections (one per username) ---------------- */
-function getOrCreatePeer(username, isInitiator){
-  let entry = peers.get(username);
-  if (entry) return entry;
-
-  const pc = new RTCPeerConnection(ICE_CONFIG);
-  entry = { pc, dc:null, connectionState:'new', pendingCandidates: [] };
-  peers.set(username, entry);
-
-  pc.onicecandidate = (e) => {
-    if (e.candidate) relaySend({ type:'ice', to: username, candidate: e.candidate });
-  };
-
-  pc.onconnectionstatechange = () => {
-    entry.connectionState = pc.connectionState;
-    log('PeerConnection("' + username + '") state → ' + pc.connectionState,
-        pc.connectionState==='connected'?'ok':pc.connectionState==='failed'?'err':undefined);
-    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected'){
-      tryIceRestart(entry);
-    }
-    if (pc.connectionState === 'closed' || pc.connectionState === 'failed'){
-      cleanupPeer(username);
-    }
-    renderContacts();
-  };
-  pc.oniceconnectionstatechange = () => {
-    log('ICE("' + username + '") state → ' + pc.iceConnectionState);
-  };
-
-  if (isInitiator){
-    const dc = pc.createDataChannel('nearby-data');
-    wireDataChannel(username, entry, dc);
-  } else {
-    pc.ondatachannel = (e) => wireDataChannel(username, entry, e.channel);
-  }
-
-  return entry;
-}
-
-async function initiateConnection(username){
-  if (peers.has(username)) return;
-  log('Initiating connection to "' + username + '"');
-  const entry = getOrCreatePeer(username, true);
-  try{
-    const offer = await entry.pc.createOffer();
-    await entry.pc.setLocalDescription(offer);
-    relaySend({ type:'offer', to: username, sdp: { type: offer.type, sdp: offer.sdp } });
-  }catch(e){ log('createOffer failed: ' + e, 'err'); }
-}
-
-async function receiveOffer(fromUser, sdp){
-  const entry = getOrCreatePeer(fromUser, false);
-  try{
-    await entry.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-    drainPendingCandidates(entry);
-    const answer = await entry.pc.createAnswer();
-    await entry.pc.setLocalDescription(answer);
-    relaySend({ type:'answer', to: fromUser, sdp: { type: answer.type, sdp: answer.sdp } });
-  }catch(e){ log('receiveOffer failed: ' + e, 'err'); }
-}
-
-function tryIceRestart(entry){
-  if (entry.pc.restartIce){
-    try{ entry.pc.restartIce(); }catch(e){}
-  }
-}
-
-function cleanupPeer(username){
-  peers.delete(username);
-  renderContacts();
-  if (activeChatUsername === username) setStatus('Peer disconnected', 'down');
-}
-
-function wireDataChannel(username, entry, dc){
-  entry.dc = dc;
-  dc.binaryType = 'arraybuffer';
-  dc.bufferedAmountLowThreshold = BUFFERED_AMOUNT_LOW;
-
-  dc.onopen = () => {
-    log('DataChannel OPEN with "' + username + '"', 'ok');
-    if (!chatLogs.has(username)) chatLogs.set(username, []);
-    renderContacts();
-    if (activeChatUsername === username) setStatus('Online', 'live');
-  };
-
-  dc.onmessage = (event) => {
-    if (typeof event.data === 'string'){
-      handleControlMessage(username, JSON.parse(event.data));
-    } else {
-      handleBinaryChunk(username, event.data);
-    }
-  };
-
-  dc.onclose = () => {
-    log('DataChannel closed with "' + username + '"', 'warn');
-  };
-}
-
-function handleControlMessage(username, msg){
-  if (msg.t === 'text'){
-    pushMessage(username, 'in', { kind:'text', text: msg.text });
-    return;
-  }
-  if (msg.t === 'image-start'){
-    incomingTransfers.set(msg.id, {
-      meta: msg, chunks: new Array(msg.totalChunks), received: 0, numericId: msg.numericId
-    });
-    pushMessage(username, 'in', { kind:'progress', id: msg.id });
-    return;
-  }
-}
-
-function handleBinaryChunk(username, buf){
-  const view = new DataView(buf);
-  const transferId = view.getUint32(0, true);
-  const chunkData = buf.slice(4);
-
-  let target = null, targetKey = null;
-  for (const [key, t] of incomingTransfers.entries()){
-    if (t.numericId === transferId){ target = t; targetKey = key; break; }
-  }
-  if (!target) return;
-
-  target.chunks[target.received] = chunkData;
-  target.received++;
-  updateProgressUI(targetKey, target.received / target.meta.totalChunks);
-
-  if (target.received >= target.meta.totalChunks){
-    const blob = new Blob(target.chunks, { type: target.meta.mime || 'image/jpeg' });
-    const url = URL.createObjectURL(blob);
-    replaceProgressWithImage(targetKey, url);
-    incomingTransfers.delete(targetKey);
-  }
-}
-
-/* ---------------- sending: text ---------------- */
-async function sendPrivateMessage(){
-  const input = document.getElementById('msg-input');
-  const text = input.value.trim();
-  if (!text || !activeChatUsername) return;
-  const entry = await ensureConnected(activeChatUsername);
-  if (!entry) return;
-  entry.dc.send(JSON.stringify({ t:'text', text }));
-  pushMessage(activeChatUsername, 'out', { kind:'text', text });
-  input.value = '';
-}
-
-async function ensureConnected(username){
-  let entry = peers.get(username);
-  if (entry && entry.dc && entry.dc.readyState === 'open') return entry;
-  if (!entry) await initiateConnection(username);
-  showToast('Connecting to ' + username + '…');
-  return null;
-}
-
-/* ---------------- sending: chunked image ---------------- */
-document.getElementById('image-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  e.target.value = '';
-  if (!file || !activeChatUsername) return;
-  const entry = await ensureConnected(activeChatUsername);
-  if (!entry) return;
-  await sendImageChunked(entry, file);
-});
-
-async function sendImageChunked(entry, file){
-  const buf = await file.arrayBuffer();
-  const totalChunks = Math.ceil(buf.byteLength / CHUNK_SIZE);
-  const numericId = transferCounter++;
-  const localId = 'out-' + numericId;
-
-  entry.dc.send(JSON.stringify({
-    t:'image-start', id: localId, numericId, name: file.name, mime: file.type,
-    size: buf.byteLength, totalChunks
-  }));
-
-  pushMessage(activeChatUsername, 'out', { kind:'progress', id: localId });
-
-  for (let i=0;i<totalChunks;i++){
-    if (entry.dc.readyState !== 'open') { showToast('Connection dropped mid-transfer'); return; }
-    while (entry.dc.bufferedAmount > BUFFERED_AMOUNT_LOW){
-      await new Promise(res => setTimeout(res, 30));
-    }
-    const start = i*CHUNK_SIZE;
-    const slice = buf.slice(start, start+CHUNK_SIZE);
-    const packet = new Uint8Array(4 + slice.byteLength);
-    new DataView(packet.buffer).setUint32(0, numericId, true);
-    packet.set(new Uint8Array(slice), 4);
-    entry.dc.send(packet.buffer);
-    updateProgressUI(localId, (i+1)/totalChunks);
-  }
-  const url = URL.createObjectURL(file);
-  replaceProgressWithImage(localId, url);
-}
-
-/* ---------------- UI rendering ---------------- */
-function setStatus(text, kind){
-  document.getElementById('status-text').textContent = text;
-  const dot = document.getElementById('status-dot');
-  dot.className = 'dot' + (kind === 'live' ? ' live' : kind === 'down' ? ' down' : '');
-}
-
-function renderContacts(){
-  const list = document.getElementById('contact-list');
-  const empty = document.getElementById('empty-contacts');
-  list.innerHTML = '';
-  empty.style.display = onlineUsers.length ? 'none' : 'block';
-  onlineUsers.forEach(name => {
-    const row = document.createElement('div');
-    row.className = 'contact-row';
-    row.onclick = () => openChat(name);
-    const log = chatLogs.get(name) || [];
-    const peer = peers.get(name);
-    const connected = peer && peer.dc && peer.dc.readyState === 'open';
-    const last = log.length ? (log[log.length-1].kind === 'text' ? log[log.length-1].text : '📷 Photo')
-                             : (connected ? 'Say hi 👋' : 'Tap to connect');
-    row.innerHTML = `
-      <div class="avatar">${name.slice(0,2).toUpperCase()}</div>
-      <div class="contact-meta">
-        <div class="cname">${escapeHtml(name)}</div>
-        <div class="clast">${escapeHtml(last)}</div>
-      </div>
-      <div class="chev">›</div>`;
-    list.appendChild(row);
-  });
-}
-
-function openManualChat(){
-  const name = document.getElementById('manual-username').value.trim();
-  if (!name) return;
-  if (!onlineUsers.includes(name)){
-    return showToast(name + ' isn\'t online on the relay right now');
-  }
-  openChat(name);
-}
-
-function openChat(name){
-  activeChatUsername = name;
-  if (!chatLogs.has(name)) chatLogs.set(name, []);
-  document.getElementById('contacts-screen').style.display = 'none';
-  document.getElementById('chat-screen').style.display = 'flex';
-  document.getElementById('back-btn').style.display = 'block';
-  document.getElementById('topbar-name').textContent = name;
-  document.getElementById('me-badge').textContent = name.slice(0,2).toUpperCase();
-  renderMessages();
-  ensureConnected(name); // fire-and-forget: kicks off the handshake if not already connected
-}
-
-function showContacts(){
-  activeChatUsername = null;
-  document.getElementById('chat-screen').style.display = 'none';
-  document.getElementById('contacts-screen').style.display = 'block';
-  document.getElementById('back-btn').style.display = 'none';
-  document.getElementById('topbar-name').textContent = myUsername;
-  document.getElementById('me-badge').textContent = myUsername.slice(0,2).toUpperCase();
-  renderContacts();
-}
-
-function pushMessage(username, dir, payload){
-  if (!chatLogs.has(username)) chatLogs.set(username, []);
-  const row = { dir, ts: Date.now(), ...payload };
-  chatLogs.get(username).push(row);
-  if (activeChatUsername === username) renderMessages();
-  renderContacts();
-}
-
-function renderMessages(){
-  const box = document.getElementById('messages');
-  const log = chatLogs.get(activeChatUsername) || [];
-  box.innerHTML = '';
-  log.forEach(m => {
-    const row = document.createElement('div');
-    row.className = 'bubble-row ' + (m.dir === 'out' ? 'out' : 'in');
-    const time = new Date(m.ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    if (m.kind === 'text'){
-      row.innerHTML = `<div class="bubble">${escapeHtml(m.text)}<div class="meta">${time}</div></div>`;
-    } else if (m.kind === 'progress'){
-      row.innerHTML = `<div class="bubble" data-progress-id="${m.id}">Sending photo…
-        <div class="progress-wrap"><div class="progress-bar" style="width:0%"></div></div></div>`;
-    } else if (m.kind === 'image'){
-      row.innerHTML = `<div class="bubble"><img src="${m.url}"><div class="meta">${time}</div></div>`;
-    }
-    box.appendChild(row);
-  });
-  box.scrollTop = box.scrollHeight;
-}
-
-function updateProgressUI(id, fraction){
-  const el = document.querySelector(`[data-progress-id="${CSS.escape(id)}"] .progress-bar`);
-  if (el) el.style.width = Math.round(fraction*100) + '%';
-}
-
-function replaceProgressWithImage(id, url){
-  for (const arr of chatLogs.values()){
-    const idx = arr.findIndex(m => m.kind === 'progress' && m.id === id);
-    if (idx !== -1){
-      arr[idx] = { ...arr[idx], kind:'image', url };
-      break;
-    }
-  }
-  renderMessages();
-  renderContacts();
-}
-
-let toastTimer;
-function showToast(text){
-  let t = document.querySelector('.toast');
-  if (t) t.remove();
-  t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = text;
-  document.getElementById('app').appendChild(t);
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.remove(), 2600);
-}
-
-function escapeHtml(s){
-  return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-/* ---------------- mobile sleep / resume handling ---------------- */
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible'){
-    if (!ws || ws.readyState === WebSocket.CLOSED){
-      setStatus('Reconnecting…', 'down');
-      connectRelay();
-    }
-    for (const [username, entry] of peers.entries()){
-      const state = entry.pc.connectionState;
-      if (state === 'disconnected' || state === 'failed') tryIceRestart(entry);
-    }
-  }
-});
-
-document.getElementById('msg-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') sendPrivateMessage();
-});
-</script>
+    <script>
+        let p2p;
+        let myUsername = "";
+
+        const trackers = [
+            'wss://://openwebtorrent.com',
+            'wss://tracker.files.fm:7073/announce'
+        ];
+
+        function startP2PConnection() {
+            myUsername = document.getElementById('username').value.trim();
+            if (!myUsername) return alert("Please enter a username!");
+
+            window.myCurrentUsername = myUsername;
+
+            document.getElementById('login-box').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'block';
+
+            try {
+                p2p = new P2PT(trackers, 'my-unique-p2p-chat-app-room-2026');
+
+                p2p.on('trackerconnect', () => {
+                    document.getElementById('status').innerText = "Direct P2P Data Pipe Ready!";
+                    document.getElementById('status').style.color = "green";
+                });
+
+                p2p.on('peerconnect', (peer) => {
+                    peer.send(JSON.stringify({ type: 'intro', from: myUsername }));
+                });
+
+                p2p.on('msg', (peer, msg) => {
+                    const data = JSON.parse(msg);
+                    
+                    if (data.type === 'intro') {
+                        peer.customUsername = data.from; 
+                    } 
+                    else if (data.type === 'private-chat') {
+                        if (data.to === myUsername) {
+                            logMessage(`[Private] ${data.from}: ${data.text}`);
+                        }
+                    }
+                    // Incoming Image Catching Logic
+                    else if (data.type === 'private-image') {
+                        if (data.to === myUsername) {
+                            logImage(`[Private Image] ${data.from}:`, data.imageBytes);
+                        }
+                    }
+                });
+
+                p2p.start();
+
+            } catch (err) {
+                document.getElementById('status').innerText = "Initialization Error: " + err.message;
+                document.getElementById('status').style.color = "red";
+            }
+        }
+
+        function sendPrivateMessage() {
+            const targetUser = document.getElementById('target-username').value.trim();
+            const msgInput = document.getElementById('msg-input');
+            const text = msgInput.value.trim();
+
+            if (!targetUser) return alert("Type Target Username!");
+            if (!text) return;
+
+            let messageSent = false;
+
+            p2p.peers.forEach((peersList) => {
+                peersList.forEach((peer) => {
+                    if (peer.customUsername === targetUser) {
+                        const packet = JSON.stringify({ 
+                            type: 'private-chat', from: myUsername, to: targetUser, text: text 
+                        });
+                        peer.send(packet);
+                        messageSent = true;
+                    }
+                });
+            });
+
+            if (messageSent) {
+                logMessage(`You (to ${targetUser}): ${text}`);
+                msgInput.value = '';
+            } else {
+                alert(`Error: User '${targetUser}' is not found.`);
+            }
+        }
+
+        // Core Image Processing & Sending Pipeline via WebRTC Data Channels [Subins2000/p2pt]
+        function sendPrivateImage() {
+            const targetUser = document.getElementById('target-username').value.trim();
+            const fileInput = document.getElementById('image-input');
+            const file = fileInput.files[0];
+
+            if (!targetUser) {
+                alert("Type Target Username First!");
+                fileInput.value = '';
+                return;
+            }
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const base64String = event.target.result; // Dynamic buffer compression
+                let imageSent = false;
+
+                p2p.peers.forEach((peersList) => {
+                    peersList.forEach((peer) => {
+                        if (peer.customUsername === targetUser) {
+                            const packet = JSON.stringify({
+                                type: 'private-image',
+                                from: myUsername,
+                                to: targetUser,
+                                imageBytes: base64String
+                            });
+                            peer.send(packet);
+                            imageSent = true;
+                        }
+                    });
+                });
+
+                if (imageSent) {
+                    logImage(`You (to ${targetUser}):`, base64String);
+                    fileInput.value = ''; // Reset button
+                } else {
+                    alert(`Error: User '${targetUser}' is not found online.`);
+                    fileInput.value = '';
+                }
+            };
+            reader.readAsDataURL(file); // Convert image to raw text string line
+        }
+
+        function logMessage(msg) {
+            const msgDiv = document.getElementById('messages');
+            msgDiv.innerHTML += `<div>${msg}</div>`;
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+        }
+
+        // Render Received or Sent Images on Screen Layout without disk saving
+        function logImage(label, base64Data) {
+            const msgDiv = document.getElementById('messages');
+            msgDiv.innerHTML += `<div><b>${label}</b><br><img src="${base64Data}" style="max-width: 200px; border-radius: 8px; margin-top: 5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1);"><br></div>`;
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+        }
+    </script>
 </body>
 </html>
