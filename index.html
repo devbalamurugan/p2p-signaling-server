@@ -3,66 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pure P2P Private Image & Chat</title>
+    <title>Global Pure P2P Secure Chat</title>
     
-    <!-- EMBEDDED PRODUCTION ENGINE BLOCK (NO CDN DEPENDENCY) -->
-    <script>
-    window.P2PT = class P2PT {
-        constructor(announceURLs, roomID) {
-            this.announceURLs = announceURLs;
-            this.roomID = roomID;
-            this.peers = new Map();
-            this.events = {};
-        }
-        on(event, callback) {
-            if (!this.events[event]) this.events[event] = [];
-            this.events[event].push(callback);
-        }
-        emit(event, ...args) {
-            if (this.events[event]) this.events[event].forEach(cb => cb(...args));
-        }
-        start() {
-            setTimeout(() => { this.emit('trackerconnect'); }, 800);
-            const channelName = 'p2p_channel_' + this.roomID;
-            this.bc = new BroadcastChannel(channelName);
-            this.bc.onmessage = (event) => {
-                const packet = event.data;
-                if (packet.targetRoom === this.roomID && packet.senderName !== window.myCurrentUsername) {
-                    const targetPeerID = packet.senderName;
-                    if (!this.peers.has(targetPeerID)) {
-                        const simulatedPeerPipe = {
-                            customUsername: targetPeerID,
-                            send: (msgString) => {
-                                this.bc.postMessage({
-                                    targetRoom: this.roomID,
-                                    senderName: window.myCurrentUsername,
-                                    payload: msgString
-                                });
-                            }
-                        };
-                        const internalList = new Map();
-                        internalList.set('main_pipe', simulatedPeerPipe);
-                        this.peers.set(targetPeerID, internalList);
-                        this.emit('peerconnect', simulatedPeerPipe);
-                    }
-                    if (packet.payload) {
-                        const targetPeerPipeInstance = this.peers.get(targetPeerID).get('main_pipe');
-                        this.emit('msg', targetPeerPipeInstance, packet.payload);
-                    }
-                }
-            };
-            setInterval(() => {
-                if (window.myCurrentUsername) {
-                    this.bc.postMessage({ targetRoom: this.roomID, senderName: window.myCurrentUsername });
-                }
-            }, 1500);
-        }
-    };
-    </script>
+    <!-- 1. High Availability Open Torrent Signaling Script Bundle -->
+    <script src="https://jsdelivr.net"></script>
 </head>
 <body style="font-family: Arial, sans-serif; padding: 15px;">
 
-    <h2>Pure P2P Private Image & Text Sharing</h2>
+    <h2>Global Pure P2P Private Image & Text Sharing</h2>
     
     <div id="login-box">
         <input type="text" id="username" placeholder="Enter Your Username">
@@ -79,7 +27,6 @@
 
         <div id="messages" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:10px; margin-bottom:10px; background: #fafafa;"></div>
         
-        <!-- Image Selector Input Layer -->
         <div style="margin-bottom: 10px; padding: 5px; border: 1px dashed #777;">
             <label><b>Share Photo:</b></label>
             <input type="file" id="image-input" accept="image/*" onchange="sendPrivateImage()">
@@ -93,29 +40,32 @@
         let p2p;
         let myUsername = "";
 
+        // Secure WebSocket Trackers supporting True Cross-Device P2P [Subins2000/p2pt]
         const trackers = [
             'wss://://openwebtorrent.com',
-            'wss://tracker.files.fm:7073/announce'
+            'wss://tracker.files.fm:7073/announce',
+            'wss://tracker.webtorrent.dev',
+            'wss://tracker.btorrent.xyz'
         ];
 
         function startP2PConnection() {
             myUsername = document.getElementById('username').value.trim();
             if (!myUsername) return alert("Please enter a username!");
 
-            window.myCurrentUsername = myUsername;
-
             document.getElementById('login-box').style.display = 'none';
             document.getElementById('chat-box').style.display = 'block';
 
             try {
-                p2p = new P2PT(trackers, 'my-unique-p2p-chat-app-room-2026');
+                // Unique Room Token ensuring your app users pair up together [Subins2000/p2pt]
+                p2p = new P2PT(trackers, 'my-global-p2p-image-sharing-production-room');
 
-                p2p.on('trackerconnect', () => {
-                    document.getElementById('status').innerText = "Direct P2P Data Pipe Ready!";
+                p2p.on('trackerconnect', (tracker, stats) => {
+                    document.getElementById('status').innerText = "Connected to Global Network! Live.";
                     document.getElementById('status').style.color = "green";
                 });
 
                 p2p.on('peerconnect', (peer) => {
+                    // Send identification packet over the active WebRTC line
                     peer.send(JSON.stringify({ type: 'intro', from: myUsername }));
                 });
 
@@ -123,14 +73,13 @@
                     const data = JSON.parse(msg);
                     
                     if (data.type === 'intro') {
-                        peer.customUsername = data.from; 
+                        peer.customUsername = data.from; // Dynamic signature map in RAM
                     } 
                     else if (data.type === 'private-chat') {
                         if (data.to === myUsername) {
                             logMessage(`[Private] ${data.from}: ${data.text}`);
                         }
                     }
-                    // Incoming Image Catching Logic
                     else if (data.type === 'private-image') {
                         if (data.to === myUsername) {
                             logImage(`[Private Image] ${data.from}:`, data.imageBytes);
@@ -172,11 +121,10 @@
                 logMessage(`You (to ${targetUser}): ${text}`);
                 msgInput.value = '';
             } else {
-                alert(`Error: User '${targetUser}' is not found.`);
+                alert(`Error: User '${targetUser}' is not found online.`);
             }
         }
 
-        // Core Image Processing & Sending Pipeline via WebRTC Data Channels [Subins2000/p2pt]
         function sendPrivateImage() {
             const targetUser = document.getElementById('target-username').value.trim();
             const fileInput = document.getElementById('image-input');
@@ -191,7 +139,7 @@
 
             const reader = new FileReader();
             reader.onload = function(event) {
-                const base64String = event.target.result; // Dynamic buffer compression
+                const base64String = event.target.result;
                 let imageSent = false;
 
                 p2p.peers.forEach((peersList) => {
@@ -211,13 +159,13 @@
 
                 if (imageSent) {
                     logImage(`You (to ${targetUser}):`, base64String);
-                    fileInput.value = ''; // Reset button
+                    fileInput.value = '';
                 } else {
                     alert(`Error: User '${targetUser}' is not found online.`);
                     fileInput.value = '';
                 }
             };
-            reader.readAsDataURL(file); // Convert image to raw text string line
+            reader.readAsDataURL(file);
         }
 
         function logMessage(msg) {
@@ -226,10 +174,9 @@
             msgDiv.scrollTop = msgDiv.scrollHeight;
         }
 
-        // Render Received or Sent Images on Screen Layout without disk saving
         function logImage(label, base64Data) {
             const msgDiv = document.getElementById('messages');
-            msgDiv.innerHTML += `<div><b>${label}</b><br><img src="${base64Data}" style="max-width: 200px; border-radius: 8px; margin-top: 5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1);"><br></div>`;
+            msgDiv.innerHTML += `<div><b>${label}</b><br><img src="${base64Data}" style="max-width: 200px; border-radius: 8px; margin-top: 5px;"><br></div>`;
             msgDiv.scrollTop = msgDiv.scrollHeight;
         }
     </script>
