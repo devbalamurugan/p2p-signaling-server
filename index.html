@@ -1,237 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pure P2P Private Image & Chat</title>
-    
-    <!-- EMBEDDED PRODUCTION ENGINE BLOCK (NO CDN DEPENDENCY) -->
-    <script>
-    window.P2PT = class P2PT {
-        constructor(announceURLs, roomID) {
-            this.announceURLs = announceURLs;
-            this.roomID = roomID;
-            this.peers = new Map();
-            this.events = {};
-        }
-        on(event, callback) {
-            if (!this.events[event]) this.events[event] = [];
-            this.events[event].push(callback);
-        }
-        emit(event, ...args) {
-            if (this.events[event]) this.events[event].forEach(cb => cb(...args));
-        }
-        start() {
-            setTimeout(() => { this.emit('trackerconnect'); }, 800);
-            const channelName = 'p2p_channel_' + this.roomID;
-            this.bc = new BroadcastChannel(channelName);
-            this.bc.onmessage = (event) => {
-                const packet = event.data;
-                if (packet.targetRoom === this.roomID && packet.senderName !== window.myCurrentUsername) {
-                    const targetPeerID = packet.senderName;
-                    if (!this.peers.has(targetPeerID)) {
-                        const simulatedPeerPipe = {
-                            customUsername: targetPeerID,
-                            send: (msgString) => {
-                                this.bc.postMessage({
-                                    targetRoom: this.roomID,
-                                    senderName: window.myCurrentUsername,
-                                    payload: msgString
-                                });
-                            }
-                        };
-                        const internalList = new Map();
-                        internalList.set('main_pipe', simulatedPeerPipe);
-                        this.peers.set(targetPeerID, internalList);
-                        this.emit('peerconnect', simulatedPeerPipe);
-                    }
-                    if (packet.payload) {
-                        const targetPeerPipeInstance = this.peers.get(targetPeerID).get('main_pipe');
-                        this.emit('msg', targetPeerPipeInstance, packet.payload);
-                    }
-                }
-            };
-            setInterval(() => {
-                if (window.myCurrentUsername) {
-                    this.bc.postMessage({ targetRoom: this.roomID, senderName: window.myCurrentUsername });
-                }
-            }, 1500);
-        }
-    };
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serverless P2P Chat Test</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; background:#0f172a; color:#e2e8f0; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 15px; color:#94a3b8; margin-top: 24px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tabs button { flex:1; padding:10px; border:none; border-radius:8px; background:#1e293b; color:#94a3b8; cursor:pointer; }
+  .tabs button.active { background:#3b82f6; color:white; }
+  .panel { display:none; }
+  .panel.active { display:block; }
+  textarea { width:100%; height:70px; background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:8px; font-size:11px; box-sizing:border-box; }
+  button.action { width:100%; padding:12px; margin:6px 0; border:none; border-radius:8px; background:#22c55e; color:white; font-weight:600; cursor:pointer; }
+  button.secondary { background:#3b82f6; }
+  #qrbox, #scanbox { display:flex; justify-content:center; margin:12px 0; }
+  #reader { width:280px; }
+  #status { padding:10px; background:#1e293b; border-radius:8px; font-size:13px; margin:12px 0; }
+  #chat { height:200px; overflow-y:auto; background:#1e293b; border-radius:8px; padding:10px; margin-bottom:8px; font-size:14px; }
+  .msg-me { text-align:right; color:#4ade80; }
+  .msg-them { text-align:left; color:#60a5fa; }
+  .chatrow { display:flex; gap:8px; }
+  .chatrow input { flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; }
+  .chatrow button { padding:10px 16px; border:none; border-radius:8px; background:#3b82f6; color:white; }
+  .note { font-size:12px; color:#94a3b8; margin-top:4px; }
+</style>
 </head>
-<body style="font-family: Arial, sans-serif; padding: 15px;">
+<body>
 
-    <h2>Pure P2P Private Image & Text Sharing</h2>
-    
-    <div id="login-box">
-        <input type="text" id="username" placeholder="Enter Your Username">
-        <button onclick="startP2PConnection()">Open App & Connect</button>
-    </div>
+<h1>🔗 Serverless P2P Chat (Test)</h1>
+<div id="status">Status: idle</div>
 
-    <div id="chat-box" style="display:none; margin-top: 20px;">
-        <p>Status: <b id="status" style="color: orange;">Connecting to Public Trackers...</b></p>
-        
-        <div style="margin-bottom: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
-            <label><b>Send To (Target Username):</b></label><br>
-            <input type="text" id="target-username" placeholder="Type friend's exact username...">
-        </div>
+<div class="tabs">
+  <button id="tabHost" class="active" onclick="switchTab('host')">Host (Create)</button>
+  <button id="tabJoin" onclick="switchTab('join')">Join (Connect)</button>
+</div>
 
-        <div id="messages" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:10px; margin-bottom:10px; background: #fafafa;"></div>
-        
-        <!-- Image Selector Input Layer -->
-        <div style="margin-bottom: 10px; padding: 5px; border: 1px dashed #777;">
-            <label><b>Share Photo:</b></label>
-            <input type="file" id="image-input" accept="image/*" onchange="sendPrivateImage()">
-        </div>
+<!-- HOST PANEL -->
+<div id="panelHost" class="panel active">
+  <h2>Step 1: Create offer</h2>
+  <button class="action" onclick="createOffer()">Create Offer</button>
+  <div id="qrbox"></div>
+  <textarea id="offerOut" readonly placeholder="Offer code will appear here..."></textarea>
+  <p class="note">Share this text (or QR) with the other device, any way you like — WhatsApp, copy-paste, or camera scan.</p>
 
-        <input type="text" id="msg-input" placeholder="Type secret private message...">
-        <button onclick="sendPrivateMessage()">Send Message</button>
-    </div>
+  <h2>Step 2: Paste their answer</h2>
+  <textarea id="answerIn" placeholder="Paste the answer code you received here..."></textarea>
+  <button class="action secondary" onclick="scanInto('answerIn')">📷 Scan QR instead</button>
+  <button class="action" onclick="acceptAnswer()">Connect</button>
+</div>
 
-    <script>
-        let p2p;
-        let myUsername = "";
+<!-- JOIN PANEL -->
+<div id="panelJoin" class="panel">
+  <h2>Step 1: Paste their offer</h2>
+  <textarea id="offerIn" placeholder="Paste the offer code you received here..."></textarea>
+  <button class="action secondary" onclick="scanInto('offerIn')">📷 Scan QR instead</button>
+  <button class="action" onclick="createAnswer()">Create Answer</button>
 
-        const trackers = [
-            'wss://://openwebtorrent.com',
-            'wss://tracker.files.fm:7073/announce'
-        ];
+  <h2>Step 2: Send this answer back</h2>
+  <div id="qrbox2"></div>
+  <textarea id="answerOut" readonly placeholder="Answer code will appear here..."></textarea>
+  <p class="note">Send this back to the host to complete the connection.</p>
+</div>
 
-        function startP2PConnection() {
-            myUsername = document.getElementById('username').value.trim();
-            if (!myUsername) return alert("Please enter a username!");
+<div id="scanbox" style="display:none;">
+  <div id="reader"></div>
+</div>
 
-            window.myCurrentUsername = myUsername;
+<h2>Chat</h2>
+<div id="chat"></div>
+<div class="chatrow">
+  <input id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+  <button onclick="sendMsg()">Send</button>
+</div>
 
-            document.getElementById('login-box').style.display = 'none';
-            document.getElementById('chat-box').style.display = 'block';
+<script>
+let pc, dc;
+const stunConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-            try {
-                p2p = new P2PT(trackers, 'my-unique-p2p-chat-app-room-2026');
+function setStatus(t) { document.getElementById('status').textContent = 'Status: ' + t; }
+function switchTab(t) {
+  document.getElementById('panelHost').classList.toggle('active', t === 'host');
+  document.getElementById('panelJoin').classList.toggle('active', t === 'join');
+  document.getElementById('tabHost').classList.toggle('active', t === 'host');
+  document.getElementById('tabJoin').classList.toggle('active', t === 'join');
+}
 
-                p2p.on('trackerconnect', () => {
-                    document.getElementById('status').innerText = "Direct P2P Data Pipe Ready!";
-                    document.getElementById('status').style.color = "green";
-                });
+function waitIceComplete(peer) {
+  return new Promise(resolve => {
+    if (peer.iceGatheringState === 'complete') return resolve();
+    peer.addEventListener('icegatheringstatechange', () => {
+      if (peer.iceGatheringState === 'complete') resolve();
+    });
+  });
+}
 
-                p2p.on('peerconnect', (peer) => {
-                    peer.send(JSON.stringify({ type: 'intro', from: myUsername }));
-                });
+function showQR(elId, text) {
+  document.getElementById(elId).innerHTML = '';
+  new QRCode(document.getElementById(elId), { text, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.L });
+}
 
-                p2p.on('msg', (peer, msg) => {
-                    const data = JSON.parse(msg);
-                    
-                    if (data.type === 'intro') {
-                        peer.customUsername = data.from; 
-                    } 
-                    else if (data.type === 'private-chat') {
-                        if (data.to === myUsername) {
-                            logMessage(`[Private] ${data.from}: ${data.text}`);
-                        }
-                    }
-                    // Incoming Image Catching Logic
-                    else if (data.type === 'private-image') {
-                        if (data.to === myUsername) {
-                            logImage(`[Private Image] ${data.from}:`, data.imageBytes);
-                        }
-                    }
-                });
+function setupChannelEvents() {
+  dc.onopen = () => setStatus('connected ✅');
+  dc.onclose = () => setStatus('disconnected');
+  dc.onmessage = e => addMsg(e.data, false);
+}
 
-                p2p.start();
+function addMsg(text, mine) {
+  const div = document.createElement('div');
+  div.className = mine ? 'msg-me' : 'msg-them';
+  div.textContent = text;
+  document.getElementById('chat').appendChild(div);
+  document.getElementById('chat').scrollTop = 1e9;
+}
 
-            } catch (err) {
-                document.getElementById('status').innerText = "Initialization Error: " + err.message;
-                document.getElementById('status').style.color = "red";
-            }
-        }
+function sendMsg() {
+  const input = document.getElementById('msgInput');
+  if (!input.value || !dc || dc.readyState !== 'open') return;
+  dc.send(input.value);
+  addMsg(input.value, true);
+  input.value = '';
+}
 
-        function sendPrivateMessage() {
-            const targetUser = document.getElementById('target-username').value.trim();
-            const msgInput = document.getElementById('msg-input');
-            const text = msgInput.value.trim();
+// HOST FLOW
+async function createOffer() {
+  setStatus('creating offer...');
+  pc = new RTCPeerConnection(stunConfig);
+  dc = pc.createDataChannel('chat');
+  setupChannelEvents();
 
-            if (!targetUser) return alert("Type Target Username!");
-            if (!text) return;
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await waitIceComplete(pc);
 
-            let messageSent = false;
+  const payload = JSON.stringify(pc.localDescription);
+  document.getElementById('offerOut').value = payload;
+  showQR('qrbox', payload);
+  setStatus('offer ready — share it');
+}
 
-            p2p.peers.forEach((peersList) => {
-                peersList.forEach((peer) => {
-                    if (peer.customUsername === targetUser) {
-                        const packet = JSON.stringify({ 
-                            type: 'private-chat', from: myUsername, to: targetUser, text: text 
-                        });
-                        peer.send(packet);
-                        messageSent = true;
-                    }
-                });
-            });
+async function acceptAnswer() {
+  const text = document.getElementById('answerIn').value.trim();
+  if (!text) return alert('Paste the answer first');
+  const desc = JSON.parse(text);
+  await pc.setRemoteDescription(desc);
+  setStatus('finalizing connection...');
+}
 
-            if (messageSent) {
-                logMessage(`You (to ${targetUser}): ${text}`);
-                msgInput.value = '';
-            } else {
-                alert(`Error: User '${targetUser}' is not found.`);
-            }
-        }
+// JOIN FLOW
+async function createAnswer() {
+  const text = document.getElementById('offerIn').value.trim();
+  if (!text) return alert('Paste the offer first');
+  setStatus('creating answer...');
 
-        // Core Image Processing & Sending Pipeline via WebRTC Data Channels [Subins2000/p2pt]
-        function sendPrivateImage() {
-            const targetUser = document.getElementById('target-username').value.trim();
-            const fileInput = document.getElementById('image-input');
-            const file = fileInput.files[0];
+  pc = new RTCPeerConnection(stunConfig);
+  pc.ondatachannel = e => { dc = e.channel; setupChannelEvents(); };
 
-            if (!targetUser) {
-                alert("Type Target Username First!");
-                fileInput.value = '';
-                return;
-            }
-            if (!file) return;
+  const offerDesc = JSON.parse(text);
+  await pc.setRemoteDescription(offerDesc);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await waitIceComplete(pc);
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const base64String = event.target.result; // Dynamic buffer compression
-                let imageSent = false;
+  const payload = JSON.stringify(pc.localDescription);
+  document.getElementById('answerOut').value = payload;
+  showQR('qrbox2', payload);
+  setStatus('answer ready — send it back');
+}
 
-                p2p.peers.forEach((peersList) => {
-                    peersList.forEach((peer) => {
-                        if (peer.customUsername === targetUser) {
-                            const packet = JSON.stringify({
-                                type: 'private-image',
-                                from: myUsername,
-                                to: targetUser,
-                                imageBytes: base64String
-                            });
-                            peer.send(packet);
-                            imageSent = true;
-                        }
-                    });
-                });
-
-                if (imageSent) {
-                    logImage(`You (to ${targetUser}):`, base64String);
-                    fileInput.value = ''; // Reset button
-                } else {
-                    alert(`Error: User '${targetUser}' is not found online.`);
-                    fileInput.value = '';
-                }
-            };
-            reader.readAsDataURL(file); // Convert image to raw text string line
-        }
-
-        function logMessage(msg) {
-            const msgDiv = document.getElementById('messages');
-            msgDiv.innerHTML += `<div>${msg}</div>`;
-            msgDiv.scrollTop = msgDiv.scrollHeight;
-        }
-
-        // Render Received or Sent Images on Screen Layout without disk saving
-        function logImage(label, base64Data) {
-            const msgDiv = document.getElementById('messages');
-            msgDiv.innerHTML += `<div><b>${label}</b><br><img src="${base64Data}" style="max-width: 200px; border-radius: 8px; margin-top: 5px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1);"><br></div>`;
-            msgDiv.scrollTop = msgDiv.scrollHeight;
-        }
-    </script>
+// QR SCANNING
+let html5QrCode;
+function scanInto(targetId) {
+  document.getElementById('scanbox').style.display = 'flex';
+  html5QrCode = new Html5Qrcode('reader');
+  html5QrCode.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: 240 },
+    decoded => {
+      document.getElementById(targetId).value = decoded;
+      html5QrCode.stop();
+      document.getElementById('scanbox').style.display = 'none';
+    },
+    () => {}
+  );
+}
+</script>
 </body>
 </html>
