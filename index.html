@@ -35,9 +35,12 @@
   .msg-me { background:#166534; float:right; text-align:right; }
   .msg-them { background:#1d4ed8; float:left; text-align:left; }
   .msg-time { font-size:10px; opacity:0.6; display:block; margin-top:2px; }
-  .chatrow { display:flex; gap:8px; }
-  .chatrow input { flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px; }
+  .msg-me img, .msg-them img { max-width:100%; border-radius:8px; display:block; margin-top:4px; }
+  .chatrow { display:flex; gap:8px; align-items:center; }
+  .chatrow input[type=text] { flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px; }
   .chatrow button { padding:10px 16px; border:none; border-radius:8px; background:#3b82f6; color:white; }
+  .icon-btn { padding:10px 12px; border:none; border-radius:8px; background:#334155; color:#e2e8f0; cursor:pointer; font-size:16px; }
+  #transferProgress { font-size:12px; color:#94a3b8; margin:4px 0; display:none; }
   .note { font-size:12px; color:#94a3b8; margin-top:4px; }
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#22c55e; color:white; padding:10px 20px; border-radius:8px; font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
   .toast.show { opacity:1; }
@@ -92,8 +95,11 @@
 
 <h2>💬 Chat</h2>
 <div id="chat"></div>
+<div id="transferProgress"></div>
 <div class="chatrow">
-  <input id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+  <button class="icon-btn" onclick="document.getElementById('imgPicker').click()">📷</button>
+  <input type="file" id="imgPicker" accept="image/*" style="display:none" onchange="sendImage(this.files[0])">
+  <input type="text" id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
   <button onclick="sendMsg()">Send</button>
 </div>
 <button class="action danger" style="margin-top:12px;" onclick="resetConnection()">🔄 Reset / New Connection</button>
@@ -166,10 +172,91 @@ function showQR(elId, text) {
 }
 
 function setupChannelEvents() {
+  dc.binaryType = 'arraybuffer';
   dc.onopen = () => setStatus('connected ✅', 'live');
   dc.onclose = () => setStatus('disconnected', '');
   dc.onerror = () => setStatus('connection error ⚠️', '');
-  dc.onmessage = e => addMsg(e.data, false);
+  dc.onmessage = e => handleIncoming(e.data);
+}
+
+// --- Image transfer protocol ---
+// Text control messages are JSON strings: {t:'img-start', id, name, mime, size, chunks}
+//                                          {t:'img-end', id}
+// Plain chat text is also a JSON string: {t:'text', v:'...'}
+// Binary ArrayBuffer chunks are sent raw, in order, between img-start and img-end.
+const incomingFiles = {};
+
+function handleIncoming(data) {
+  if (typeof data === 'string') {
+    let msg;
+    try { msg = JSON.parse(data); } catch (e) { return; }
+    if (msg.t === 'text') {
+      addMsg(msg.v, false);
+    } else if (msg.t === 'img-start') {
+      incomingFiles[msg.id] = { chunks: [], name: msg.name, mime: msg.mime, expected: msg.chunks };
+      showProgress('Receiving image... 0%');
+    } else if (msg.t === 'img-end') {
+      const f = incomingFiles[msg.id];
+      if (!f) return;
+      const blob = new Blob(f.chunks, { type: f.mime });
+      const url = URL.createObjectURL(blob);
+      addImageMsg(url, false);
+      delete incomingFiles[msg.id];
+      hideProgress();
+    }
+  } else {
+    // binary chunk — belongs to whichever transfer is currently in progress
+    const ids = Object.keys(incomingFiles);
+    if (!ids.length) return;
+    const f = incomingFiles[ids[ids.length - 1]];
+    f.chunks.push(data);
+    const pct = Math.round((f.chunks.length / f.expected) * 100);
+    showProgress('Receiving image... ' + pct + '%');
+  }
+}
+
+function showProgress(text) {
+  const el = document.getElementById('transferProgress');
+  el.style.display = 'block';
+  el.textContent = text;
+}
+function hideProgress() {
+  document.getElementById('transferProgress').style.display = 'none';
+}
+
+function addImageMsg(url, mine) {
+  const div = document.createElement('div');
+  div.className = mine ? 'msg-me' : 'msg-them';
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  div.innerHTML = '<img src="' + url + '"><span class="msg-time">' + time + '</span>';
+  document.getElementById('chat').appendChild(div);
+  document.getElementById('chat').scrollTop = 1e9;
+}
+
+async function sendImage(file) {
+  if (!file || !dc || dc.readyState !== 'open') return toast('Not connected yet');
+  const CHUNK_SIZE = 16 * 1024;
+  const buf = await file.arrayBuffer();
+  const totalChunks = Math.ceil(buf.byteLength / CHUNK_SIZE);
+  const id = Date.now().toString();
+
+  dc.send(JSON.stringify({ t: 'img-start', id, name: file.name, mime: file.type, size: buf.byteLength, chunks: totalChunks }));
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = buf.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+    // simple backpressure: wait if the channel's send buffer is getting full
+    while (dc.bufferedAmount > 1_000_000) {
+      await new Promise(r => setTimeout(r, 50));
+    }
+    dc.send(chunk);
+    showProgress('Sending image... ' + Math.round(((i + 1) / totalChunks) * 100) + '%');
+  }
+
+  dc.send(JSON.stringify({ t: 'img-end', id }));
+  const localUrl = URL.createObjectURL(file);
+  addImageMsg(localUrl, true);
+  hideProgress();
+  document.getElementById('imgPicker').value = '';
 }
 
 function addMsg(text, mine) {
@@ -190,7 +277,7 @@ function escapeHtml(str) {
 function sendMsg() {
   const input = document.getElementById('msgInput');
   if (!input.value || !dc || dc.readyState !== 'open') return toast('Not connected yet');
-  dc.send(input.value);
+  dc.send(JSON.stringify({ t: 'text', v: input.value }));
   addMsg(input.value, true);
   input.value = '';
 }
