@@ -7,82 +7,121 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
+  * { box-sizing: border-box; }
   body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; background:#0f172a; color:#e2e8f0; }
   h1 { font-size: 20px; }
-  h2 { font-size: 15px; color:#94a3b8; margin-top: 24px; }
+  h2 { font-size: 15px; color:#94a3b8; margin-top: 24px; display:flex; align-items:center; gap:8px; }
+  .step-num { background:#3b82f6; color:white; width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
   .tabs { display:flex; gap:8px; margin-bottom:16px; }
-  .tabs button { flex:1; padding:10px; border:none; border-radius:8px; background:#1e293b; color:#94a3b8; cursor:pointer; }
+  .tabs button { flex:1; padding:10px; border:none; border-radius:8px; background:#1e293b; color:#94a3b8; cursor:pointer; font-size:14px; }
   .tabs button.active { background:#3b82f6; color:white; }
   .panel { display:none; }
   .panel.active { display:block; }
-  textarea { width:100%; height:70px; background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:8px; font-size:11px; box-sizing:border-box; }
-  button.action { width:100%; padding:12px; margin:6px 0; border:none; border-radius:8px; background:#22c55e; color:white; font-weight:600; cursor:pointer; }
+  textarea { width:100%; height:70px; background:#1e293b; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:8px; font-size:11px; }
+  button.action { width:100%; padding:12px; margin:6px 0; border:none; border-radius:8px; background:#22c55e; color:white; font-weight:600; cursor:pointer; font-size:14px; }
   button.secondary { background:#3b82f6; }
-  #qrbox, #scanbox { display:flex; justify-content:center; margin:12px 0; }
+  button.ghost { background:#334155; color:#e2e8f0; }
+  button.danger { background:#ef4444; }
+  .row2 { display:flex; gap:8px; }
+  .row2 button { flex:1; }
+  #qrbox, #qrbox2, #scanbox { display:flex; justify-content:center; margin:12px 0; }
   #reader { width:280px; }
-  #status { padding:10px; background:#1e293b; border-radius:8px; font-size:13px; margin:12px 0; }
-  #chat { height:200px; overflow-y:auto; background:#1e293b; border-radius:8px; padding:10px; margin-bottom:8px; font-size:14px; }
-  .msg-me { text-align:right; color:#4ade80; }
-  .msg-them { text-align:left; color:#60a5fa; }
+  #status { padding:10px; background:#1e293b; border-radius:8px; font-size:13px; margin:12px 0; display:flex; align-items:center; gap:8px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#64748b; }
+  .dot.live { background:#22c55e; box-shadow:0 0 6px #22c55e; }
+  .dot.busy { background:#eab308; }
+  #chat { height:220px; overflow-y:auto; background:#1e293b; border-radius:8px; padding:10px; margin-bottom:8px; font-size:14px; }
+  .msg-me, .msg-them { max-width:80%; margin:4px 0; padding:6px 10px; border-radius:10px; clear:both; }
+  .msg-me { background:#166534; float:right; text-align:right; }
+  .msg-them { background:#1d4ed8; float:left; text-align:left; }
+  .msg-time { font-size:10px; opacity:0.6; display:block; margin-top:2px; }
   .chatrow { display:flex; gap:8px; }
-  .chatrow input { flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; }
+  .chatrow input { flex:1; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e2e8f0; font-size:14px; }
   .chatrow button { padding:10px 16px; border:none; border-radius:8px; background:#3b82f6; color:white; }
   .note { font-size:12px; color:#94a3b8; margin-top:4px; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#22c55e; color:white; padding:10px 20px; border-radius:8px; font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+  .toast.show { opacity:1; }
 </style>
 </head>
 <body>
 
 <h1>🔗 Serverless P2P Chat (Test)</h1>
-<div id="status">Status: idle</div>
+<div id="status"><span class="dot" id="statusDot"></span><span id="statusText">idle</span></div>
 
 <div class="tabs">
   <button id="tabHost" class="active" onclick="switchTab('host')">Host (Create)</button>
   <button id="tabJoin" onclick="switchTab('join')">Join (Connect)</button>
 </div>
 
-<!-- HOST PANEL -->
 <div id="panelHost" class="panel active">
-  <h2>Step 1: Create offer</h2>
+  <h2><span class="step-num">1</span>Create offer</h2>
   <button class="action" onclick="createOffer()">Create Offer</button>
   <div id="qrbox"></div>
   <textarea id="offerOut" readonly placeholder="Offer code will appear here..."></textarea>
-  <p class="note">Share this text (or QR) with the other device, any way you like — WhatsApp, copy-paste, or camera scan.</p>
+  <div class="row2">
+    <button class="ghost" onclick="copyText('offerOut')">📋 Copy</button>
+    <button class="ghost" onclick="shareText('offerOut')">📤 Share (WhatsApp etc.)</button>
+  </div>
+  <p class="note">Send this to the other device, any way you like.</p>
 
-  <h2>Step 2: Paste their answer</h2>
+  <h2><span class="step-num">2</span>Paste their answer</h2>
   <textarea id="answerIn" placeholder="Paste the answer code you received here..."></textarea>
   <button class="action secondary" onclick="scanInto('answerIn')">📷 Scan QR instead</button>
   <button class="action" onclick="acceptAnswer()">Connect</button>
 </div>
 
-<!-- JOIN PANEL -->
 <div id="panelJoin" class="panel">
-  <h2>Step 1: Paste their offer</h2>
+  <h2><span class="step-num">1</span>Paste their offer</h2>
   <textarea id="offerIn" placeholder="Paste the offer code you received here..."></textarea>
   <button class="action secondary" onclick="scanInto('offerIn')">📷 Scan QR instead</button>
   <button class="action" onclick="createAnswer()">Create Answer</button>
 
-  <h2>Step 2: Send this answer back</h2>
+  <h2><span class="step-num">2</span>Send this answer back</h2>
   <div id="qrbox2"></div>
   <textarea id="answerOut" readonly placeholder="Answer code will appear here..."></textarea>
-  <p class="note">Send this back to the host to complete the connection.</p>
+  <div class="row2">
+    <button class="ghost" onclick="copyText('answerOut')">📋 Copy</button>
+    <button class="ghost" onclick="shareText('answerOut')">📤 Share (WhatsApp etc.)</button>
+  </div>
+  <p class="note">Send this back to the host to finish connecting.</p>
 </div>
 
 <div id="scanbox" style="display:none;">
   <div id="reader"></div>
 </div>
 
-<h2>Chat</h2>
+<h2>💬 Chat</h2>
 <div id="chat"></div>
 <div class="chatrow">
   <input id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
   <button onclick="sendMsg()">Send</button>
 </div>
+<button class="action danger" style="margin-top:12px;" onclick="resetConnection()">🔄 Reset / New Connection</button>
+
+<div class="toast" id="toast"></div>
 
 <script>
 let pc, dc;
-const stunConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const iceConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+  ]
+};
 
-function setStatus(t) { document.getElementById('status').textContent = 'Status: ' + t; }
+function setStatus(text, mode) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusDot').className = 'dot' + (mode ? ' ' + mode : '');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1500);
+}
+
 function switchTab(t) {
   document.getElementById('panelHost').classList.toggle('active', t === 'host');
   document.getElementById('panelJoin').classList.toggle('active', t === 'join');
@@ -90,12 +129,34 @@ function switchTab(t) {
   document.getElementById('tabJoin').classList.toggle('active', t === 'join');
 }
 
+function copyText(id) {
+  const val = document.getElementById(id).value;
+  if (!val) return toast('Nothing to copy yet');
+  navigator.clipboard.writeText(val).then(() => toast('Copied ✅'));
+}
+
+function shareText(id) {
+  const val = document.getElementById(id).value;
+  if (!val) return toast('Nothing to share yet');
+  if (navigator.share) {
+    navigator.share({ text: val }).catch(() => {});
+  } else {
+    copyText(id);
+    toast('Share not supported — copied instead');
+  }
+}
+
 function waitIceComplete(peer) {
   return new Promise(resolve => {
     if (peer.iceGatheringState === 'complete') return resolve();
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
     peer.addEventListener('icegatheringstatechange', () => {
-      if (peer.iceGatheringState === 'complete') resolve();
+      if (peer.iceGatheringState === 'complete') finish();
     });
+    // Don't wait forever for slow TURN candidates — 3s of gathering is plenty for STUN,
+    // and any candidates found so far are already attached to the SDP.
+    setTimeout(finish, 3000);
   });
 }
 
@@ -105,74 +166,112 @@ function showQR(elId, text) {
 }
 
 function setupChannelEvents() {
-  dc.onopen = () => setStatus('connected ✅');
-  dc.onclose = () => setStatus('disconnected');
+  dc.onopen = () => setStatus('connected ✅', 'live');
+  dc.onclose = () => setStatus('disconnected', '');
+  dc.onerror = () => setStatus('connection error ⚠️', '');
   dc.onmessage = e => addMsg(e.data, false);
 }
 
 function addMsg(text, mine) {
   const div = document.createElement('div');
   div.className = mine ? 'msg-me' : 'msg-them';
-  div.textContent = text;
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  div.innerHTML = escapeHtml(text) + '<span class="msg-time">' + time + '</span>';
   document.getElementById('chat').appendChild(div);
   document.getElementById('chat').scrollTop = 1e9;
 }
 
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
 function sendMsg() {
   const input = document.getElementById('msgInput');
-  if (!input.value || !dc || dc.readyState !== 'open') return;
+  if (!input.value || !dc || dc.readyState !== 'open') return toast('Not connected yet');
   dc.send(input.value);
   addMsg(input.value, true);
   input.value = '';
 }
 
-// HOST FLOW
 async function createOffer() {
-  setStatus('creating offer...');
-  pc = new RTCPeerConnection(stunConfig);
+  setStatus('creating offer...', 'busy');
+  pc = new RTCPeerConnection(iceConfig);
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed') setStatus('connection failed ❌ (check network)', '');
+    if (pc.connectionState === 'disconnected') setStatus('disconnected', '');
+  };
   dc = pc.createDataChannel('chat');
   setupChannelEvents();
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
+  setStatus('gathering network info... (up to 3s)', 'busy');
   await waitIceComplete(pc);
 
   const payload = JSON.stringify(pc.localDescription);
   document.getElementById('offerOut').value = payload;
   showQR('qrbox', payload);
-  setStatus('offer ready — share it');
+  setStatus('offer ready — share it', 'busy');
 }
 
 async function acceptAnswer() {
   const text = document.getElementById('answerIn').value.trim();
-  if (!text) return alert('Paste the answer first');
-  const desc = JSON.parse(text);
-  await pc.setRemoteDescription(desc);
-  setStatus('finalizing connection...');
+  if (!text) return toast('Paste the answer first');
+  try {
+    const desc = JSON.parse(text);
+    await pc.setRemoteDescription(desc);
+    setStatus('finalizing connection...', 'busy');
+  } catch (e) {
+    toast('Invalid answer code');
+  }
 }
 
-// JOIN FLOW
 async function createAnswer() {
   const text = document.getElementById('offerIn').value.trim();
-  if (!text) return alert('Paste the offer first');
-  setStatus('creating answer...');
+  if (!text) return toast('Paste the offer first');
+  setStatus('creating answer...', 'busy');
 
-  pc = new RTCPeerConnection(stunConfig);
+  pc = new RTCPeerConnection(iceConfig);
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed') setStatus('connection failed ❌ (check network)', '');
+    if (pc.connectionState === 'disconnected') setStatus('disconnected', '');
+  };
   pc.ondatachannel = e => { dc = e.channel; setupChannelEvents(); };
 
-  const offerDesc = JSON.parse(text);
-  await pc.setRemoteDescription(offerDesc);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  await waitIceComplete(pc);
+  try {
+    const offerDesc = JSON.parse(text);
+    await pc.setRemoteDescription(offerDesc);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    setStatus('gathering network info... (up to 3s)', 'busy');
+    await waitIceComplete(pc);
 
-  const payload = JSON.stringify(pc.localDescription);
-  document.getElementById('answerOut').value = payload;
-  showQR('qrbox2', payload);
-  setStatus('answer ready — send it back');
+    const payload = JSON.stringify(pc.localDescription);
+    document.getElementById('answerOut').value = payload;
+    showQR('qrbox2', payload);
+    setStatus('answer ready — send it back', 'busy');
+  } catch (e) {
+    toast('Invalid offer code');
+    setStatus('idle', '');
+  }
 }
 
-// QR SCANNING
+function resetConnection() {
+  if (pc) pc.close();
+  pc = null; dc = null;
+  document.getElementById('offerOut').value = '';
+  document.getElementById('answerIn').value = '';
+  document.getElementById('offerIn').value = '';
+  document.getElementById('answerOut').value = '';
+  document.getElementById('qrbox').innerHTML = '';
+  document.getElementById('qrbox2').innerHTML = '';
+  document.getElementById('chat').innerHTML = '';
+  setStatus('idle', '');
+  toast('Reset done');
+}
+
 let html5QrCode;
 function scanInto(targetId) {
   document.getElementById('scanbox').style.display = 'flex';
@@ -184,6 +283,7 @@ function scanInto(targetId) {
       document.getElementById(targetId).value = decoded;
       html5QrCode.stop();
       document.getElementById('scanbox').style.display = 'none';
+      toast('QR scanned ✅');
     },
     () => {}
   );
