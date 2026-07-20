@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>P2P Chat (PeerJS)</title>
+<title>P2P Chat + Call (PeerJS)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 <style>
   * { box-sizing: border-box; }
@@ -38,11 +38,16 @@
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#22c55e; color:white; padding:10px 20px; border-radius:8px; font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
   .toast.show { opacity:1; }
   #chatSection { display:none; }
+  #callBar { display:none; background:#1e293b; border-radius:8px; padding:14px; margin-bottom:10px; text-align:center; }
+  #callBar.ringing { background:#78350f; }
+  #callBar .call-status { font-size:14px; margin-bottom:8px; }
+  .call-btn-row { display:flex; gap:8px; justify-content:center; }
+  .call-btn { width:52px; height:52px; border-radius:50%; border:none; font-size:20px; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<h1>🔗 P2P Chat — Permanent ID</h1>
+<h1>🔗 P2P Chat + Call</h1>
 <div id="status"><span class="dot" id="statusDot"></span><span id="statusText">not online yet</span></div>
 
 <h2>1. Go online with your own ID</h2>
@@ -60,6 +65,22 @@
 <p class="note">Use the same ID every time you go online — anyone can reach you with it, anytime you're online, from any network.</p>
 
 <div id="chatSection">
+  <div id="callBar">
+    <div class="call-status" id="callStatus">Idle</div>
+    <div class="call-btn-row" id="callControlsIdle">
+      <button class="call-btn" style="background:#22c55e;" onclick="startCall()">📞</button>
+    </div>
+    <div class="call-btn-row" id="callControlsRinging" style="display:none;">
+      <button class="call-btn" style="background:#22c55e;" onclick="acceptCall()">✅</button>
+      <button class="call-btn" style="background:#ef4444;" onclick="rejectCall()">❌</button>
+    </div>
+    <div class="call-btn-row" id="callControlsActive" style="display:none;">
+      <button class="call-btn" id="muteBtn" style="background:#334155;" onclick="toggleMute()">🎙️</button>
+      <button class="call-btn" style="background:#ef4444;" onclick="endCall()">📵</button>
+    </div>
+  </div>
+  <audio id="remoteAudio" autoplay></audio>
+
   <h2>💬 Chat</h2>
   <div id="chat"></div>
   <div id="transferProgress"></div>
@@ -75,7 +96,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let peer, conn;
+let peer, conn, activeCall, localStream, muted = false;
 const incomingFiles = {};
 
 function setStatus(text, mode) {
@@ -92,7 +113,7 @@ function copyMyId() {
   navigator.clipboard.writeText(peer.id).then(() => toast('Copied ✅'));
 }
 
-// --- Go online (registers with PeerJS free public signaling server) ---
+// --- Go online ---
 function goOnline() {
   const wanted = document.getElementById('myIdInput').value.trim();
   if (!wanted) return toast('Choose an ID first');
@@ -112,6 +133,12 @@ function goOnline() {
     toast('Incoming connection...');
   });
 
+  // Incoming CALL (separate from data connection)
+  peer.on('call', call => {
+    activeCall = call;
+    showCallBar('ringing', 'Incoming call from ' + call.peer + '...');
+  });
+
   peer.on('error', err => {
     if (err.type === 'unavailable-id') {
       toast('That ID is taken right now — try another');
@@ -124,7 +151,7 @@ function goOnline() {
   peer.on('disconnected', () => setStatus('disconnected from signaling server', ''));
 }
 
-// --- Connect to a friend by their ID ---
+// --- Connect to a friend by their ID (for chat) ---
 function connectToFriend() {
   if (!peer || peer.disconnected) return toast('Go online first');
   const friendId = document.getElementById('friendIdInput').value.trim();
@@ -138,6 +165,7 @@ function setupConnEvents() {
   conn.on('open', () => {
     setStatus('connected ✅ (' + conn.peer + ')', 'live');
     document.getElementById('chatSection').style.display = 'block';
+    showCallBar('idle', 'Ready to call ' + conn.peer);
   });
   conn.on('data', data => handleIncoming(data));
   conn.on('close', () => setStatus('peer disconnected', ''));
@@ -146,12 +174,96 @@ function setupConnEvents() {
 
 function disconnectPeer() {
   if (conn) conn.close();
+  endCall();
   document.getElementById('chatSection').style.display = 'none';
   document.getElementById('chat').innerHTML = '';
   setStatus('online — waiting for connection', 'live');
 }
 
-// --- Chat ---
+// ---------------- CALL LOGIC ----------------
+function showCallBar(state, statusText) {
+  const bar = document.getElementById('callBar');
+  bar.style.display = 'block';
+  bar.className = state === 'ringing' ? 'ringing' : '';
+  document.getElementById('callStatus').textContent = statusText;
+  document.getElementById('callControlsIdle').style.display = state === 'idle' ? 'flex' : 'none';
+  document.getElementById('callControlsRinging').style.display = state === 'ringing' ? 'flex' : 'none';
+  document.getElementById('callControlsActive').style.display = state === 'active' ? 'flex' : 'none';
+}
+
+async function getMic() {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    toast('Microphone permission denied');
+    throw e;
+  }
+}
+
+async function startCall() {
+  if (!conn) return toast('Connect to someone first');
+  try {
+    localStream = await getMic();
+  } catch (e) { return; }
+  activeCall = peer.call(conn.peer, localStream);
+  showCallBar('active', 'Calling ' + conn.peer + '...');
+  wireCallEvents();
+}
+
+async function acceptCall() {
+  try {
+    localStream = await getMic();
+  } catch (e) { rejectCall(); return; }
+  activeCall.answer(localStream);
+  showCallBar('active', 'In call with ' + activeCall.peer);
+  wireCallEvents();
+}
+
+function rejectCall() {
+  if (activeCall) activeCall.close();
+  activeCall = null;
+  showCallBar('idle', 'Ready to call');
+}
+
+function wireCallEvents() {
+  activeCall.on('stream', remoteStream => {
+    document.getElementById('remoteAudio').srcObject = remoteStream;
+    showCallBar('active', 'In call with ' + activeCall.peer);
+  });
+  activeCall.on('close', () => {
+    showCallBar('idle', 'Call ended');
+    stopLocalStream();
+  });
+  activeCall.on('error', () => {
+    toast('Call error');
+    endCall();
+  });
+}
+
+function endCall() {
+  if (activeCall) activeCall.close();
+  activeCall = null;
+  stopLocalStream();
+  showCallBar('idle', 'Ready to call' + (conn ? ' ' + conn.peer : ''));
+}
+
+function stopLocalStream() {
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  muted = false;
+  document.getElementById('muteBtn').textContent = '🎙️';
+}
+
+function toggleMute() {
+  if (!localStream) return;
+  muted = !muted;
+  localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🎙️';
+}
+
+// ---------------- CHAT ----------------
 function addMsg(text, mine) {
   const div = document.createElement('div');
   div.className = mine ? 'msg-me' : 'msg-them';
@@ -173,7 +285,7 @@ function sendMsg() {
   input.value = '';
 }
 
-// --- Images (chunked binary over the same connection) ---
+// ---------------- IMAGES ----------------
 function handleIncoming(data) {
   if (data && data.t === 'text') {
     addMsg(data.v, false);
@@ -188,7 +300,6 @@ function handleIncoming(data) {
     delete incomingFiles[data.id];
     hideProgress();
   } else {
-    // raw binary chunk (Uint8Array/ArrayBuffer from PeerJS)
     const ids = Object.keys(incomingFiles);
     if (!ids.length) return;
     const f = incomingFiles[ids[ids.length - 1]];
